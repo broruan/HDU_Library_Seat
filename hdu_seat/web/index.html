@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>杭电图书馆抢座面板</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #e3e8ee;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #ea580c;
+    --gray: #6b7280;
+    --blue: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header .sub { opacity: .85; font-size: 12px; margin-top: 4px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.15);
+    padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 500;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; }
+  .dot.running { background: #4ade80; animation: pulse 1s infinite; }
+  .dot.waiting { background: #fbbf24; animation: pulse 1.5s infinite; }
+  .dot.success { background: #4ade80; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .layout { display: grid; grid-template-columns: 420px 1fr; gap: 20px; padding: 20px 28px; max-width: 1280px; margin: 0 auto; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .card h2::before { content: ""; width: 4px; height: 16px; background: var(--primary); border-radius: 2px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-family: inherit; background: #fafbfc; color: var(--text);
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--primary); background: #fff; }
+  .field textarea { min-height: 72px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .check-field { min-height: 66px; }
+  .check-label { display: flex !important; align-items: center; gap: 8px; color: var(--text) !important; font-size: 13px !important; margin-top: 10px; cursor: pointer; }
+  .check-label input { width: 16px; height: 16px; accent-color: var(--primary); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .btn {
+    border: none; border-radius: 8px; padding: 11px 14px; font-size: 14px; font-weight: 600;
+    cursor: pointer; color: #fff; transition: transform .05s, opacity .2s; font-family: inherit;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-green { background: var(--green); }
+  .btn-gray { background: #64748b; }
+  .btn-orange { background: var(--orange); }
+  .btn-red { background: var(--red); }
+  .btn-ghost { background: #eef2f7; color: var(--text); }
+  .btn-ghost:hover { background: #e2e8f0; }
+  .full { grid-column: 1 / -1; }
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; z-index: 50; opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--red); }
+  .toast.ok { background: var(--green); }
+  .log { max-height: 420px; overflow-y: auto; }
+  .log-item { display: flex; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #f0f2f5; align-items: flex-start; }
+  .log-item:last-child { border-bottom: none; }
+  .log-time { color: var(--muted); font-size: 11px; white-space: nowrap; font-family: ui-monospace, monospace; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .badge.reserved { background: #dcfce7; color: #15803d; }
+  .badge.dry-run { background: #dbeafe; color: #1d4ed8; }
+  .badge.empty { background: #f1f5f9; color: #475569; }
+  .badge.error { background: #fee2e2; color: #b91c1c; }
+  .badge.stopped { background: #ffedd5; color: #c2410c; }
+  .log-msg { flex: 1; font-size: 12px; color: var(--text); word-break: break-all; line-height: 1.5; }
+  .seat-tag { font-family: ui-monospace, monospace; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+  .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; max-height: 320px; overflow-y: auto; }
+  .seat-chip { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; text-align: center; font-family: inherit; color: inherit; cursor: default; }
+  .seat-chip .title { font-weight: 700; font-size: 14px; }
+  .seat-chip .id { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .seat-chip.avail { border-color: #bbf7d0; background: #f0fdf4; cursor: pointer; }
+  .seat-chip.avail:hover { border-color: var(--green); }
+  .seat-chip.selected { border: 2px solid var(--primary); background: #dbeafe; box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
+  .seat-chip.unavail { background: #f8fafc; color: #94a3b8; }
+  .seat-summary { color: var(--muted); font-size: 12px; margin-bottom: 9px; }
+  .seat-area + .seat-area { margin-top: 14px; }
+  .seat-area-title { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 7px; font-size: 13px; font-weight: 700; }
+  .seat-area-count { color: var(--muted); font-size: 11px; font-weight: 400; }
+  .empty-note { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
+  .kbd { background: #eef2f7; border-radius: 4px; padding: 1px 6px; font-family: ui-monospace, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>杭电图书馆抢座面板</h1>
+    <div class="sub">hdu.huitu.zhishulib.com · 座位查询 / 抢座</div>
+  </div>
+  <div class="status-pill"><span class="dot" id="dot"></span><span id="runLabel">空闲</span></div>
+</header>
+
+<div class="layout">
+  <!-- 左侧：配置表单 -->
+  <div class="card">
+    <h2>配置</h2>
+
+    <div class="field">
+      <label>Cookie（浏览器登录后复制）</label>
+      <textarea id="cookie" placeholder="粘贴完整的 Cookie，例如 JSESSIONID=xxx; token=yyy"></textarea>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>自习室 category_id</label>
+        <input id="category_id" type="number" value="591">
+      </div>
+      <div class="field">
+        <label>自习室 content_id</label>
+        <input id="content_id" type="number" value="3">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>使用日期（留空 = 今天）</label>
+        <input id="date" type="date">
+        <div class="hint">抢当天就留空</div>
+      </div>
+      <div class="field">
+        <label>开始时间（留空 = 立即）</label>
+        <input id="start_time" type="time" step="3600">
+        <div class="hint">仅支持整点，例如 08:00、18:00</div>
+        <div class="hint" id="timePreview"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>使用时长（小时）</label>
+        <input id="duration_hours" type="number" min="0.5" step="0.5" value="4">
+      </div>
+      <div class="field">
+        <label>人数</label>
+        <input id="num" type="number" min="1" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>指定座位号（可选，逗号分隔）</label>
+        <input id="seat_ids" placeholder="例如 001, 002">
+      </div>
+      <div class="field">
+        <label>关键词筛选（可选，逗号分隔）</label>
+        <input id="keywords" placeholder="例如 靠窗, 电源">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>优先楼层（可选）</label>
+        <input id="preferred_floor" type="number" min="1" step="1" placeholder="例如 3">
+      </div>
+      <div class="field check-field">
+        <label>座位偏好</label>
+        <label class="check-label"><input id="avoid_near_door" type="checkbox"> 避开门口附近座位</label>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>轮询间隔（秒）</label>
+        <input id="poll_interval" type="number" min="0" step="1" value="3">
+      </div>
+      <div class="field">
+        <label>最大尝试次数</label>
+        <input id="max_attempts" type="number" min="1" step="1" value="200">
+      </div>
+    </div>
+    <div class="hint">「开始抢座」会一直重试，直到约到座位、达到次数或你手动停止</div>
+
+    <div class="field" style="margin-top:12px;">
+      <label>定时启动抢座（可选，留空 = 立即启动）</label>
+      <input id="schedule_at" type="datetime-local" step="1">
+      <div class="hint">按北京时间执行。这是程序开始抢座的时间，不是上面的座位使用时间。</div>
+      <div class="hint" id="schedulePreview"></div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-ghost" onclick="saveConfig()">保存配置</button>
+      <button class="btn btn-gray" onclick="querySeats()">查询座位</button>
+      <button class="btn btn-primary" onclick="dryRun()">试运行（不预约）</button>
+      <button class="btn btn-green" id="startBtn" onclick="start()">开始 / 定时抢座</button>
+      <button class="btn btn-red full" id="stopBtn" onclick="stop()" disabled>停止</button>
+    </div>
+  </div>
+
+  <!-- 右侧：状态与日志 -->
+  <div>
+    <div class="card" style="margin-bottom:20px;">
+      <h2>可预约座位</h2>
+      <div id="seats"><div class="empty-note">点击「查询座位」查看当前可预约座位</div></div>
+    </div>
+
+    <div class="card">
+      <h2>抢座日志</h2>
+      <div class="log" id="log"><div class="empty-note">暂无记录</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastQueriedSeats = [];
+let lastSeatRevision = -1;
+let taskIsRunning = false;
+let selectionSaveTimer = null;
+
+function showToast(msg, type) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast', 2600);
+}
+
+function splitList(v) {
+  if (!v) return [];
+  return String(v).split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
+}
+
+function updateTimePreview() {
+  const preview = $('timePreview');
+  if (!preview) return;
+  const date = $('date').value;
+  const time = $('start_time').value;
+  if (!time) { preview.textContent = '未填写开始时间：将按当前时间立即查询'; return; }
+  if (!date) { preview.textContent = '预约日期：今天'; return; }
+  const selected = new Date(`${date}T${time}:00+08:00`);
+  if (Number.isNaN(selected.getTime())) { preview.textContent = ''; return; }
+  const diff = selected.getTime() - Date.now();
+  preview.textContent = diff > 0
+    ? `实际预约时间：${date} ${time}（北京时间，约 ${Math.ceil(diff / 60000)} 分钟后）`
+    : `实际预约时间：${date} ${time}（北京时间，已过去）`;
+}
+
+function beijingLocalNow() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 19);
+}
+
+function updateSchedulePreview() {
+  const input = $('schedule_at');
+  const preview = $('schedulePreview');
+  if (!input || !preview) return;
+  const value = input.value;
+  if (!value) { preview.textContent = '未设置：点击后立即开始抢座'; return; }
+  const isoValue = value.length === 16 ? `${value}:00` : value;
+  const target = new Date(`${isoValue}+08:00`);
+  const diff = target.getTime() - Date.now();
+  preview.textContent = diff > 0
+    ? `将在 ${value.replace('T', ' ')}（北京时间）自动开始，约 ${Math.ceil(diff / 60000)} 分钟后`
+    : '该定时启动时间已经过去，请重新选择';
+}
+
+function collectConfig() {
+  const floor = $('preferred_floor') ? $('preferred_floor').value : '';
+  return {
+    base_url: 'https://hdu.huitu.zhishulib.com',
+    cookie: $('cookie').value.trim(),
+    category_id: $('category_id').value,
+    content_id: $('content_id').value,
+    date: $('date').value || null,
+    start_time: $('start_time').value || null,
+    duration_hours: $('duration_hours').value,
+    num: $('num').value,
+    seat_ids: splitList($('seat_ids').value),
+    keywords: splitList($('keywords').value),
+    preferred_floor: floor ? floor : null,
+    avoid_near_door: $('avoid_near_door').checked,
+    poll_interval: $('poll_interval').value,
+    max_attempts: $('max_attempts').value,
+    request_timeout: 10,
+    schedule_at: $('schedule_at').value || null,
+  };
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function fillForm(cfg) {
+  const beijingToday = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+  const beijingNow = beijingLocalNow();
+  $('date').min = beijingToday;
+  $('schedule_at').min = beijingNow.slice(0, 16);
+  const savedDateExpired = cfg.date && cfg.date < beijingToday;
+  const savedSchedule = String(cfg.schedule_at || '').replace(' ', 'T').slice(0, 19);
+  $('cookie').value = cfg.cookie || '';
+  $('category_id').value = cfg.category_id ?? 591;
+  $('content_id').value = cfg.content_id ?? 3;
+  // Do not let a stale persisted booking date make every future query fail.
+  $('date').value = savedDateExpired ? '' : (cfg.date || '');
+  $('start_time').value = savedDateExpired ? '' : (cfg.start_time || '');
+  $('duration_hours').value = cfg.duration_hours ?? 4;
+  $('num').value = cfg.num ?? 1;
+  $('seat_ids').value = (cfg.seat_ids || []).join(', ');
+  $('keywords').value = (cfg.keywords || []).join(', ');
+  $('preferred_floor').value = cfg.preferred_floor ?? '';
+  $('avoid_near_door').checked = Boolean(cfg.avoid_near_door);
+  $('poll_interval').value = cfg.poll_interval ?? 3;
+  $('max_attempts').value = cfg.max_attempts ?? 200;
+  $('schedule_at').value = savedSchedule && savedSchedule > beijingNow ? savedSchedule : '';
+  updateTimePreview();
+  updateSchedulePreview();
+}
+
+const STATUS_TEXT = {
+  reserved: '预约成功', 'dry-run': '命中座位', empty: '本轮未命中',
+  error: '出错', stopped: '已停止',
+};
+
+function renderLog(history) {
+  const log = $('log');
+  if (!history || !history.length) { log.innerHTML = '<div class="empty-note">暂无记录</div>'; return; }
+  log.innerHTML = history.slice().reverse().map(h => {
+    const seat = h.seat ? `<span class="seat-tag">${h.seat.title || h.seat.id || ''}</span>` : '';
+    return `<div class="log-item">
+      <span class="log-time">${(h.at || '').replace('T', ' ')}</span>
+      <span class="badge ${h.status}">${STATUS_TEXT[h.status] || h.status}</span>
+      <span class="log-msg">${escapeHtml(h.message || '')} ${seat}</span>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSeats(seats) {
+  const box = $('seats');
+  lastQueriedSeats = seats || [];
+  if (!seats || !seats.length) { box.innerHTML = '<div class="empty-note">当前无可预约座位</div>'; return; }
+  const selectedValues = new Set(splitList($('seat_ids').value));
+  const availableCount = seats.filter(s => s.available).length;
+  const selectedCount = seats.filter(s => selectedValues.has(String(s.id ?? '')) || selectedValues.has(String(s.title ?? ''))).length;
+  const groups = new Map();
+  seats.forEach(seat => {
+    const area = String(seat.area || (seat.floor ? `${seat.floor} 楼` : '未标注区域'));
+    if (!groups.has(area)) groups.set(area, []);
+    groups.get(area).push(seat);
+  });
+  const areasHtml = [...groups.entries()].map(([area, areaSeats]) => {
+    const cards = areaSeats.map(s => {
+      const avail = s.available;
+      const id = String(s.id ?? '');
+      const title = String(s.title ?? s.name ?? id);
+      const selected = selectedValues.has(id) || selectedValues.has(title);
+      return `<button type="button" class="seat-chip ${avail ? 'avail' : 'unavail'} ${selected ? 'selected' : ''}"
+        data-seat-id="${escapeHtml(id)}" data-seat-title="${escapeHtml(title)}" ${avail ? '' : 'disabled'}>
+        <div class="title">${escapeHtml(title)}</div>
+        <div class="id">${s.floor ? escapeHtml(s.floor) + ' 楼 · ' : ''}#${escapeHtml(id)}${avail ? ' · 可约' : ''}</div>
+      </button>`;
+    }).join('');
+    const freeInArea = areaSeats.filter(s => s.available).length;
+    return `<section class="seat-area">
+      <div class="seat-area-title"><span>${escapeHtml(area)}</span><span class="seat-area-count">可约 ${freeInArea} / ${areaSeats.length}</span></div>
+      <div class="seats-grid">${cards}</div>
+    </section>`;
+  }).join('');
+  box.innerHTML = `<div class="seat-summary">共 ${seats.length} 个座位，当前可约 ${availableCount} 个，已选 ${selectedCount} 个。点击绿色座位可选择或取消。</div>${areasHtml}`;
+  box.querySelectorAll('.seat-chip.avail').forEach(chip => {
+    chip.addEventListener('click', () => toggleSeat(chip.dataset.seatId, chip.dataset.seatTitle));
+  });
+}
+
+function toggleSeat(id, title) {
+  const input = $('seat_ids');
+  const values = splitList(input.value);
+  const index = values.findIndex(value => value === id || value === title);
+  if (index >= 0) values.splice(index, 1);
+  else if (id) values.push(id);
+  input.value = values.join(', ');
+  renderSeats(lastQueriedSeats);
+  queueSelectionSave();
+}
+
+function queueSelectionSave() {
+  clearTimeout(selectionSaveTimer);
+  selectionSaveTimer = setTimeout(async () => {
+    try {
+      await api('POST', '/api/config', collectConfig());
+      showToast(taskIsRunning ? '目标座位已更新，将在下一轮生效' : '目标座位已保存', 'ok');
+    } catch (e) {
+      showToast(`目标座位保存失败：${e.message}`, 'error');
+    }
+  }, 150);
+}
+
+async function loadConfig() {
+  try {
+    const cfg = await api('GET', '/api/config');
+    fillForm(cfg);
+  } catch (e) { /* 忽略 */ }
+}
+
+async function saveConfig() {
+  try {
+    await api('POST', '/api/config', collectConfig());
+    showToast(taskIsRunning ? '配置已保存，将在下一轮抢座生效' : '配置已保存', 'ok');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function querySeats() {
+  try {
+    const data = await api('POST', '/api/seats', collectConfig());
+    renderSeats(data.seats || []);
+    showToast('已查询', 'ok');
+  } catch (e) {
+    $('seats').innerHTML = '<div class="empty-note"></div>';
+    showToast(e.message, 'error');
+  }
+}
+
+async function dryRun() {
+  try {
+    const data = await api('POST', '/api/run', { config: collectConfig(), dry_run: true });
+    showToast(STATUS_TEXT[data.status] || data.status, data.status === 'dry-run' ? 'ok' : 'error');
+    refreshStatus();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function start() {
+  try {
+    const data = await api('POST', '/api/start', collectConfig());
+    showToast(data.waiting ? `已设定，将在 ${String(data.scheduled_for).replace('T', ' ')} 开始` : '已开始抢座', 'ok');
+    refreshStatus();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function stop() {
+  try {
+    await api('POST', '/api/stop');
+    showToast('已发送停止请求', 'ok');
+    refreshStatus();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function refreshStatus() {
+  try {
+    const s = await api('GET', '/api/status');
+    taskIsRunning = Boolean(s.running);
+    const dot = $('dot'), label = $('runLabel');
+    if (s.waiting) { dot.className = 'dot waiting'; label.textContent = `等待至 ${String(s.scheduled_for || '').replace('T', ' ')}`; }
+    else if (s.running) { dot.className = 'dot running'; label.textContent = '抢座中…'; }
+    else if (s.last_result && s.last_result.status === 'reserved') { dot.className = 'dot success'; label.textContent = '已约到座位'; }
+    else { dot.className = 'dot'; label.textContent = '空闲'; }
+    $('startBtn').disabled = s.running;
+    $('stopBtn').disabled = !s.running;
+    renderLog(s.history || []);
+    // While the task is running, display the exact snapshot obtained by its
+    // latest poll instead of issuing an extra upstream request.
+    if (s.running && s.seat_revision !== lastSeatRevision) {
+      lastSeatRevision = s.seat_revision;
+      renderSeats(s.seats || []);
+    }
+  } catch (e) { /* 忽略轮询错误 */ }
+}
+
+loadConfig();
+refreshStatus();
+['date', 'start_time'].forEach(id => $(id).addEventListener('input', updateTimePreview));
+$('schedule_at').addEventListener('input', updateSchedulePreview);
+updateTimePreview();
+updateSchedulePreview();
+setInterval(refreshStatus, 1500);
+setInterval(updateTimePreview, 30000);
+</script>
+</body>
+</html>

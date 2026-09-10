@@ -1,0 +1,50 @@
+# Local configuration and credentials
+/config.json
+/config.local.json
+/config.*.local.json
+.env
+.env.*
+!.env.example
+
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+
+# Build and package artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Test, coverage, and type-checker caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Logs and editor/OS metadata
+*.log
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local reverse-engineering and API probe artifacts
+/_probe*
+/_resp.json
+/_get_resp.json
+/_submit.txt
+/app.es6.min.js
+/tmp*/

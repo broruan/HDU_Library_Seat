@@ -1,0 +1,24 @@
+{
+  "base_url": "https://hdu.huitu.zhishulib.com",
+  "cookie": "粘贴浏览器登录后抓到的完整 Cookie",
+  "space_category": {
+    "category_id": 591,
+    "content_id": 3
+  },
+  "booking": {
+    "date": null,
+    "start_time": null,
+    "duration_hours": 4,
+    "num": 1
+  },
+  "rule": {
+    "seat_ids": [],
+    "keywords": [],
+    "preferred_floor": null,
+    "avoid_near_door": false
+  },
+  "poll_interval": 3,
+  "max_attempts": 200,
+  "request_timeout": 10,
+  "schedule_at": null
+}

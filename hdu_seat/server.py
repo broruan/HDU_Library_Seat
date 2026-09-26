@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
+import webbrowser
 from dataclasses import asdict
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -318,7 +319,7 @@ class SeatWebServer:
         self.stop_event.set()
 
 
-def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765) -> None:
+def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool = False) -> None:
     app = SeatWebServer(config_path)
 
     class Handler(BaseHTTPRequestHandler):
@@ -387,8 +388,11 @@ def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765) ->
             return
 
     server = ThreadingHTTPServer((host, port), Handler)
-    print(f"抢座面板已启动: http://{host}:{port}")
+    url = f"http://{host}:{server.server_port}"
+    print(f"抢座面板已启动: {url}", flush=True)
     try:
+        if open_browser:
+            webbrowser.open(url)
         server.serve_forever()
     except KeyboardInterrupt:
         pass

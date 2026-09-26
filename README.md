@@ -13,6 +13,14 @@ A local seat reservation helper for Hangzhou Dianzi University Library's Huitu/Z
 
 ## 中文
 
+### Windows 免安装版
+
+从 [GitHub Releases](https://github.com/broruan/HDU_Library_Seat/releases/latest) 下载 `HDU-Library-Seat-Windows-x64.exe`，双击即可在默认浏览器中打开原有面板，无需安装 Python。适用于 Windows 10/11 64 位。
+
+使用期间保留程序窗口；退出时在程序窗口按 `Ctrl+C` 或关闭该窗口。仅关闭浏览器不会停止预约任务。配置保存在 `%LOCALAPPDATA%\HDU-Library-Seat\config.json`。
+
+开发者可在 Windows 上运行 `powershell -ExecutionPolicy Bypass -File build-windows.ps1` 重新构建 exe，产物位于 `dist`。
+
 ### 功能
 
 - 在本地 Web 面板中查询、筛选和选择可预约座位
@@ -147,6 +155,12 @@ pyproject.toml         打包与项目元数据
 欢迎提交 Issue 或 Pull Request。请勿在测试、日志、截图或提交记录中包含真实 Cookie、学号、用户 ID 或预约响应数据；新增功能时请同时补充测试。
 
 ## English
+
+### Standalone Windows release
+
+Download `HDU-Library-Seat-Windows-x64.exe` from [GitHub Releases](https://github.com/broruan/HDU_Library_Seat/releases/latest). Double-click it to open the dashboard in your default browser; Python is not required. Supports 64-bit Windows 10/11.
+
+Keep the program window open while using the dashboard. Press `Ctrl+C` in that window or close it to exit; closing only the browser does not stop reservation tasks. Settings are stored in `%LOCALAPPDATA%\HDU-Library-Seat\config.json`.
 
 ### Features
 

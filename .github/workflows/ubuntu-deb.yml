@@ -1,0 +1,46 @@
+name: Build and test Ubuntu deb packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ['22.04', '24.04', '26.04']
+    container:
+      image: ubuntu:${{ matrix.ubuntu }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 ca-certificates desktop-file-utils
+      - name: Test and build
+        run: |
+          python3 -m unittest discover -v
+          python3 packaging/build_deb.py --ubuntu '${{ matrix.ubuntu }}'
+      - name: Install and test as a desktop user
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get install -y --no-install-recommends ./dist/*.deb
+          desktop-file-validate /usr/share/applications/hdu-library-seat.desktop
+          useradd --create-home smoke-test
+          runuser -u smoke-test -- python3 packaging/smoke_deb.py
+          dpkg --remove hdu-library-seat
+          test ! -e /usr/bin/hdu-library-seat
+          test ! -e /usr/share/applications/hdu-library-seat.desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-${{ matrix.ubuntu }}-deb
+          path: dist/*.deb
+          if-no-files-found: error

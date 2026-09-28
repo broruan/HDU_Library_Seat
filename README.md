@@ -21,6 +21,20 @@ A local seat reservation helper for Hangzhou Dianzi University Library's Huitu/Z
 
 开发者可在 Windows 上运行 `powershell -ExecutionPolicy Bypass -File build-windows.ps1` 重新构建 exe，产物位于 `dist`。
 
+### Ubuntu 安装包
+
+在 [GitHub Releases](https://github.com/broruan/HDU_Library_Seat/releases/latest) 下载对应 Ubuntu **22.04、24.04 或 26.04** 的 `.deb` 文件，然后在下载目录执行：
+
+```bash
+sudo apt install ./hdu-library-seat_*_all.deb
+```
+
+只下载并安装与你的 Ubuntu 版本对应的一个包。安装后在应用菜单打开“杭电图书馆座位助手”，或运行 `hdu-library-seat`，程序会自动打开默认浏览器。保留终端窗口，在终端按 `Ctrl+C` 退出。配置保存在 `~/.config/hdu-library-seat/config.json`（支持 `XDG_CONFIG_HOME`）。
+
+安装器会通过系统软件源安装 Python 3、CA 证书和浏览器启动工具，无需 pip。包内不包含个人配置；`all` 表示纯 Python 包不绑定 CPU 架构。可用 `sudo apt remove hdu-library-seat` 卸载，个人配置会保留。
+
+开发者可在目标 Ubuntu 版本执行 `python3 packaging/build_deb.py --ubuntu 22.04`（替换为所需版本）。GitHub Actions 对三个 Ubuntu 版本分别执行构建、安装、启动、配置持久化和卸载验证。
+
 ### 功能
 
 - 在本地 Web 面板中查询、筛选和选择可预约座位
@@ -161,6 +175,12 @@ pyproject.toml         打包与项目元数据
 Download `HDU-Library-Seat-Windows-x64.exe` from [GitHub Releases](https://github.com/broruan/HDU_Library_Seat/releases/latest). Double-click it to open the dashboard in your default browser; Python is not required. Supports 64-bit Windows 10/11.
 
 Keep the program window open while using the dashboard. Press `Ctrl+C` in that window or close it to exit; closing only the browser does not stop reservation tasks. Settings are stored in `%LOCALAPPDATA%\HDU-Library-Seat\config.json`.
+
+### Ubuntu packages
+
+Download the `.deb` for Ubuntu **22.04, 24.04, or 26.04** from [GitHub Releases](https://github.com/broruan/HDU_Library_Seat/releases/latest), then run `sudo apt install ./hdu-library-seat_*_all.deb` in the download directory. Download only the package matching your Ubuntu version.
+
+Launch **HDU Library Seat Helper** from the applications menu or run `hdu-library-seat`. It opens the dashboard in your default browser. Keep the terminal open; press `Ctrl+C` to exit. Settings are stored in `~/.config/hdu-library-seat/config.json` (or under `XDG_CONFIG_HOME`). The installer resolves system dependencies without pip. The pure Python package is architecture-independent. Uninstall with `sudo apt remove hdu-library-seat`; personal settings are retained.
 
 ### Features
 

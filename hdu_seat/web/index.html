@@ -3,241 +3,274 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>杭电图书馆抢座面板</title>
+<meta name="theme-color" content="#f5f7fb">
+<title>杭电图书馆座位助手</title>
 <style>
   :root {
-    --bg: #f4f6f9;
+    --bg: #f5f7fb;
     --card: #ffffff;
-    --border: #e3e8ee;
-    --text: #1f2937;
-    --muted: #6b7280;
+    --border: #e4e9f1;
+    --text: #202d42;
+    --muted: #65748a;
     --primary: #2563eb;
     --primary-dark: #1d4ed8;
-    --green: #16a34a;
-    --red: #dc2626;
-    --orange: #ea580c;
-    --gray: #6b7280;
+    --primary-soft: #eff5ff;
+    --green: #16815d;
+    --red: #c43d4c;
+    --orange: #a86512;
+    --gray: #65748a;
     --blue: #2563eb;
+    --ease: cubic-bezier(.2, .7, .2, 1);
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 14px;
-  }
-  header {
-    background: linear-gradient(135deg, #1e3a8a, #2563eb);
-    color: #fff;
-    padding: 18px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
-  header .sub { opacity: .85; font-size: 12px; margin-top: 4px; }
-  .status-pill {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,.15);
-    padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 500;
-  }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; }
-  .dot.running { background: #4ade80; animation: pulse 1s infinite; }
-  .dot.waiting { background: #fbbf24; animation: pulse 1.5s infinite; }
-  .dot.success { background: #4ade80; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-  .layout { display: grid; grid-template-columns: 420px 1fr; gap: 20px; padding: 20px 28px; max-width: 1280px; margin: 0 auto; }
-  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
-  .card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  .card h2::before { content: ""; width: 4px; height: 16px; background: var(--primary); border-radius: 2px; }
-  .field { margin-bottom: 12px; }
-  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
-  .field input, .field textarea, .field select {
-    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
-    font-size: 13px; font-family: inherit; background: #fafbfc; color: var(--text);
-  }
-  .field input:focus, .field textarea:focus { outline: none; border-color: var(--primary); background: #fff; }
-  .field textarea { min-height: 72px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-  .check-field { min-height: 66px; }
-  .check-label { display: flex !important; align-items: center; gap: 8px; color: var(--text) !important; font-size: 13px !important; margin-top: 10px; cursor: pointer; }
-  .check-label input { width: 16px; height: 16px; accent-color: var(--primary); }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-  .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
-  .btn {
-    border: none; border-radius: 8px; padding: 11px 14px; font-size: 14px; font-weight: 600;
-    cursor: pointer; color: #fff; transition: transform .05s, opacity .2s; font-family: inherit;
-  }
-  .btn:active { transform: translateY(1px); }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-primary { background: var(--primary); }
-  .btn-primary:hover { background: var(--primary-dark); }
-  .btn-green { background: var(--green); }
-  .btn-gray { background: #64748b; }
-  .btn-orange { background: var(--orange); }
-  .btn-red { background: var(--red); }
-  .btn-ghost { background: #eef2f7; color: var(--text); }
-  .btn-ghost:hover { background: #e2e8f0; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  button, input, textarea, select { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid #93b6ff; outline-offset: 3px; }
+  svg { display: block; flex-shrink: 0; }
+  header { background: var(--card); border-bottom: 1px solid var(--border); }
+  .header-inner { max-width: 1344px; margin: auto; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--primary); color: white; }
+  header h1 { font-size: 20px; font-weight: 700; line-height: 1.35; margin: 0; letter-spacing: .01em; }
+  .status-pill { display: inline-flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid var(--border); padding: 8px 13px; border-radius: 999px; font-size: 13px; flex-shrink: 0; max-width: 50%; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #8895a8; flex-shrink: 0; transition: background-color 180ms; }
+  .dot.running { background: var(--green); animation: pulse 1.6s ease-in-out infinite; }
+  .dot.waiting { background: var(--orange); animation: pulse 2s ease-in-out infinite; }
+  .dot.success { background: var(--green); }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 #16815d22; } 50% { box-shadow: 0 0 0 4px #16815d00; opacity: .6; } }
+  .workspace-note { position: sticky; top: 0; z-index: 40; max-width: 1344px; margin: auto; padding: 12px 32px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 20px; background: var(--bg); color: var(--muted); font-size: 13px; }
+  .default-message { grid-column: 1; grid-row: 1; }
+  .workspace-note:has(.toast.show) .default-message, .workspace-note:has(.toast.show) .timezone { visibility: hidden; }
+  .timezone { grid-column: 2; grid-row: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .layout { display: grid; grid-template-columns: 392px minmax(0, 1fr); align-items: start; gap: 24px; padding: 0 32px 32px; max-width: 1344px; margin: auto; }
+  .card { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 3px 12px #20345304; overflow: hidden; animation: enter 380ms var(--ease) both; }
+  .results-column { display: grid; gap: 24px; min-width: 0; }
+  .seats-card { animation-delay: 60ms; }
+  .log-card { animation-delay: 120ms; }
+  @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .panel-head { padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+  .panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.5; }
+  .panel-title { display: flex; align-items: center; gap: 10px; }
+  .panel-title svg { color: var(--muted); }
+  .settings-section { padding: 12px 24px; border-bottom: 1px solid var(--border); }
+  .settings-section h3 { font-size: 13px; margin: 0 0 10px; font-weight: 700; }
+  .field { min-width: 0; margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; color: #45546a; font-size: 13px; margin-bottom: 6px; }
+  .optional { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: 4px; }
+  .field input, .field textarea, .field select { width: 100%; min-width: 0; height: 40px; padding: 8px 11px; border: 1px solid #dce3ed; border-radius: 8px; background: #fff; color: var(--text); outline: none; transition: border-color 180ms, box-shadow 180ms; }
+  .field input::placeholder, .field textarea::placeholder { color: #8390a2; opacity: 1; }
+  .field input:hover, .field textarea:hover { border-color: #b8c6da; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #2563eb14; }
+  .field textarea { height: 64px; min-height: 64px; resize: vertical; font: 12px/1.6 ui-monospace, Consolas, monospace; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .row .field { margin-bottom: 10px; }
+  .row:last-child .field { margin-bottom: 0; }
+  .preference-row { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.65; margin-top: 6px; overflow-wrap: anywhere; }
+  .hint:empty { display: none; }
+  .check-label { display: flex !important; align-items: center; gap: 9px; margin: 12px 0 0 !important; font-size: 13px !important; color: #45546a !important; cursor: pointer; }
+  .check-label input { width: 16px; height: 16px; accent-color: var(--primary); margin: 0; flex-shrink: 0; }
+  .advanced { padding: 0; }
+  .advanced summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 15px 24px; font-size: 13px; font-weight: 600; }
+  .advanced summary::-webkit-details-marker { display: none; }
+  .advanced summary svg { color: var(--muted); transition: transform 180ms var(--ease); }
+  .advanced[open] summary svg { transform: rotate(180deg); }
+  .advanced-fields { padding: 0 24px 20px; }
+  .actions { padding: 16px 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; border: 1px solid transparent; border-radius: 8px; padding: 9px 13px; font-size: 13px; line-height: 1.5; font-weight: 600; cursor: pointer; color: #fff; transition: background-color 180ms, border-color 180ms, box-shadow 180ms, transform 100ms var(--ease), opacity 180ms; }
+  .btn:active:not(:disabled) { transform: scale(.98); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); box-shadow: 0 3px 6px #2563eb16; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); box-shadow: 0 4px 10px #2563eb25; }
+  .btn-ghost { background: #fff; border-color: #dce3ed; color: #45546a; }
+  .btn-ghost:hover:not(:disabled) { background: #f8fafc; border-color: #bccbe0; }
+  .btn-query { color: var(--primary); background: var(--primary-soft); border-color: #dce8ff; }
+  .btn-query:hover { background: #e3edff; border-color: #c1d6ff; }
+  .btn-red { color: var(--red); background: #fff; border-color: #efd4d8; }
+  .btn-red:hover:not(:disabled) { background: #fff2f3; }
+  .btn-save { border: none; min-height: 32px; padding: 4px 0 4px 10px; background: transparent; color: var(--muted); font-size: 12px; }
+  .btn-save:hover { color: var(--primary); }
   .full { grid-column: 1 / -1; }
-  .toast {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-    background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px;
-    font-size: 13px; z-index: 50; opacity: 0; transition: opacity .25s; pointer-events: none;
-  }
-  .toast.show { opacity: 1; }
-  .toast.error { background: var(--red); }
-  .toast.ok { background: var(--green); }
-  .log { max-height: 420px; overflow-y: auto; }
-  .log-item { display: flex; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #f0f2f5; align-items: flex-start; }
+  #startBtn { min-height: 44px; font-size: 14px; }
+  .seats-content { padding: 22px 24px; }
+  .seat-legend { display: flex; flex-wrap: wrap; gap: 20px; padding: 14px 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  .legend-item { display: inline-flex; align-items: center; gap: 7px; }
+  .legend-mark { width: 9px; height: 9px; border-radius: 3px; background: #e7edf4; border: 1px solid #d5deea; }
+  .legend-mark.available { background: #e8f6ef; border-color: #a1cdb8; }
+  .legend-mark.selected { background: var(--primary); border-color: var(--primary); }
+  .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; max-height: 350px; overflow-y: auto; padding: 3px; margin: 0 -3px; }
+  .seat-chip { position: relative; width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 17px 10px 12px; text-align: left; font-family: inherit; color: var(--text); cursor: default; transition: background-color 160ms, border-color 160ms, box-shadow 160ms, transform 160ms var(--ease); }
+  .seat-chip .title { font-weight: 700; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+  .seat-chip .id { color: var(--muted); font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+  .seat-state { display: block; color: var(--green); font-size: 12px; margin-top: 4px; line-height: 1.5; }
+  .selected .seat-state { color: var(--primary-dark); }
+  .unavail .seat-state { color: #8491a4; }
+  .seat-chip.avail { border-color: #c5e2d3; background: #f6fbf8; cursor: pointer; }
+  .seat-chip.avail::after { content: ''; position: absolute; width: 6px; height: 6px; top: 10px; right: 10px; border-radius: 50%; background: var(--green); }
+  .seat-chip.avail:hover { border-color: #7cb89a; background: #edf8f1; transform: translateY(-2px); }
+  .seat-chip:active:not(:disabled) { transform: scale(.98); }
+  .seat-chip.selected { border-color: var(--primary); background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary); }
+  .seat-chip.selected:hover { border-color: var(--primary); background: #e5eeff; }
+  .seat-chip.selected::after { content: '✓'; color: white; background: var(--primary); width: 16px; height: 16px; line-height: 16px; text-align: center; font-size: 11px; border-radius: 4px; top: 7px; right: 7px; }
+  .seat-chip.unavail { background: #f8fafc; color: #8a97aa; }
+  .seat-chip.unavail .id { color: #8491a4; }
+  .seat-summary { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.8; }
+  .seat-area + .seat-area { margin-top: 24px; }
+  .seat-area-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+  .seat-area-count { color: var(--muted); font-size: 12px; font-weight: 400; white-space: nowrap; }
+  .empty-note { color: var(--muted); font-size: 13px; text-align: center; padding: 28px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  #seats > .empty-note { min-height: 300px; }
+  .empty-note::before { content: ''; width: 66px; height: 66px; border-radius: 18px; background: #f2f5fa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34' fill='none' stroke='%238398b5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 19V9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v10M8 17v7h18v-7M10 24v5M24 24v5M13 12h8'/%3E%3C/svg%3E") center no-repeat; }
+  .empty-title { font-size: 15px; font-weight: 600; color: #4a5b73; }
+  .empty-copy { max-width: 310px; line-height: 1.8; }
+  .log { max-height: 420px; overflow-y: auto; padding: 8px 24px; }
+  .log > .empty-note { min-height: 180px; }
+  .log .empty-note::before { width: 44px; height: 44px; border-radius: 50%; background-size: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' fill='none' stroke='%238398b5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='10'/%3E%3Cpath d='M16 10v6l4 3'/%3E%3C/svg%3E"); }
+  .log-item { display: grid; grid-template-columns: 144px auto minmax(0, 1fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid #eef1f6; align-items: start; }
   .log-item:last-child { border-bottom: none; }
-  .log-time { color: var(--muted); font-size: 11px; white-space: nowrap; font-family: ui-monospace, monospace; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
-  .badge.reserved { background: #dcfce7; color: #15803d; }
-  .badge.dry-run { background: #dbeafe; color: #1d4ed8; }
-  .badge.empty { background: #f1f5f9; color: #475569; }
-  .badge.error { background: #fee2e2; color: #b91c1c; }
-  .badge.stopped { background: #ffedd5; color: #c2410c; }
-  .log-msg { flex: 1; font-size: 12px; color: var(--text); word-break: break-all; line-height: 1.5; }
-  .seat-tag { font-family: ui-monospace, monospace; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
-  .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; max-height: 320px; overflow-y: auto; }
-  .seat-chip { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; text-align: center; font-family: inherit; color: inherit; cursor: default; }
-  .seat-chip .title { font-weight: 700; font-size: 14px; }
-  .seat-chip .id { color: var(--muted); font-size: 11px; margin-top: 2px; }
-  .seat-chip.avail { border-color: #bbf7d0; background: #f0fdf4; cursor: pointer; }
-  .seat-chip.avail:hover { border-color: var(--green); }
-  .seat-chip.selected { border: 2px solid var(--primary); background: #dbeafe; box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
-  .seat-chip.unavail { background: #f8fafc; color: #94a3b8; }
-  .seat-summary { color: var(--muted); font-size: 12px; margin-bottom: 9px; }
-  .seat-area + .seat-area { margin-top: 14px; }
-  .seat-area-title { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 7px; font-size: 13px; font-weight: 700; }
-  .seat-area-count { color: var(--muted); font-size: 11px; font-weight: 400; }
-  .empty-note { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
-  .kbd { background: #eef2f7; border-radius: 4px; padding: 1px 6px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .log-time { color: var(--muted); font-size: 12px; line-height: 24px; font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 5px; font-weight: 500; white-space: nowrap; }
+  .badge.reserved { background: #e8f6ef; color: #137653; }
+  .badge.dry-run { background: var(--primary-soft); color: var(--primary-dark); }
+  .badge.empty { background: #f1f4f8; color: #57667c; }
+  .badge.error { background: #fff0f1; color: #b43747; }
+  .badge.stopped { background: #fff4e7; color: #a5620e; }
+  .log-msg { font-size: 13px; overflow-wrap: anywhere; line-height: 1.85; }
+  .seat-tag { font-family: ui-monospace, Consolas, monospace; background: #f1f4f8; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+  .toast { grid-column: 1 / -1; grid-row: 1; min-height: 40px; display: flex; align-items: center; background: #e8edf5; color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity 200ms, transform 200ms var(--ease), visibility 200ms; pointer-events: none; }
+  .toast.show { opacity: 1; visibility: visible; transform: translateY(0); }
+  .toast.error { background: #fff0f1; color: #b43747; }
+  .toast.ok { background: #e8f6ef; color: #176c51; }
+  .page-footer { max-width: 1344px; margin: auto; padding: 0 32px 24px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 1050px) {
+    .layout { grid-template-columns: 360px minmax(0, 1fr); gap: 20px; padding-inline: 24px; }
+    .header-inner, .workspace-note { padding-inline: 24px; }
+    .panel-head, .settings-section { padding-inline: 20px; }
+    .advanced { padding-inline: 0; }
+    .advanced summary, .advanced-fields, .actions, .seats-content, .seat-legend, .log { padding-inline: 20px; }
+    .log-item { grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; }
+    .log-time { grid-column: 1 / -1; }
+  }
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
+    .workspace-note { max-width: 620px; }
+    .timezone { display: none; }
+    .results-column { gap: 20px; }
+    .seats-grid { max-height: none; overflow-y: visible; }
+    #seats > .empty-note { min-height: 240px; }
+  }
+  @media (max-width: 480px) {
+    .header-inner { padding: 18px 18px; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .brand { gap: 10px; }
+    .brand-mark { width: 38px; height: 38px; border-radius: 11px; }
+    header h1 { font-size: 17px; }
+    .status-pill { margin-left: 48px; padding: 5px 10px; max-width: calc(100% - 48px); font-size: 12px; }
+    .workspace-note { padding: 10px 18px; font-size: 12px; grid-template-columns: minmax(0, 1fr); }
+    .layout { padding: 0 14px 22px; gap: 18px; }
+    .panel-head { padding: 17px 18px; }
+    .settings-section { padding: 14px 18px; }
+    .advanced { padding: 0; }
+    .advanced summary, .advanced-fields, .actions, .seats-content, .seat-legend, .log { padding-inline: 18px; }
+    .row { gap: 10px; }
+    .field input, .field textarea { font-size: 14px; }
+    .field input[type='date'], .field input[type='time'], .field input[type='datetime-local'] { padding-inline: 8px; }
+    .seats-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+    .seat-legend { gap: 14px; }
+    .page-footer { padding-inline: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .seat-chip.avail:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <h1>杭电图书馆抢座面板</h1>
-    <div class="sub">hdu.huitu.zhishulib.com · 座位查询 / 抢座</div>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v15M3 4.5c3.5-.8 6.5-.2 9 1.5 2.5-1.7 5.5-2.3 9-1.5V18c-3.5-.8-6.5-.2-9 1.5C9.5 17.8 6.5 17.2 3 18V4.5Z"/><path d="m6 8 3 .7M6 11.5l3 .7m6-3.5 3-.7m-3 4.2 3-.7"/></svg></div>
+      <h1>杭电图书馆座位助手</h1>
+    </div>
+    <div class="status-pill" role="status"><span class="dot" id="dot" aria-hidden="true"></span><span id="runLabel">空闲</span></div>
   </div>
-  <div class="status-pill"><span class="dot" id="dot"></span><span id="runLabel">空闲</span></div>
 </header>
 
-<div class="layout">
-  <!-- 左侧：配置表单 -->
-  <div class="card">
-    <h2>配置</h2>
+<div class="workspace-note"><div class="default-message">选择可预约座位，目标会自动保存。</div><span class="timezone">北京时间 · UTC+8</span><div class="toast" id="toast" role="status" aria-live="polite"></div></div>
 
-    <div class="field">
-      <label>Cookie（浏览器登录后复制）</label>
-      <textarea id="cookie" placeholder="粘贴完整的 Cookie，例如 JSESSIONID=xxx; token=yyy"></textarea>
+<main class="layout">
+  <section class="card config-card" aria-labelledby="configHeading">
+    <div class="panel-head"><h2 id="configHeading">预约设置</h2><button class="btn btn-save" type="button" onclick="saveConfig()"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8"/></svg>保存配置</button></div>
+
+    <div class="settings-section">
+      <div class="field"><label for="cookie">登录 Cookie</label><textarea id="cookie" placeholder="粘贴浏览器登录后的完整 Cookie" spellcheck="false" autocomplete="off"></textarea></div>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label>自习室 category_id</label>
-        <input id="category_id" type="number" value="591">
+    <div class="settings-section">
+      <h3>使用时段</h3>
+      <div class="row">
+        <div class="field"><label for="date">使用日期<span class="optional">默认今天</span></label><input id="date" type="date"></div>
+        <div class="field"><label for="start_time">开始时间<span class="optional">整点</span></label><input id="start_time" type="time" step="3600"></div>
       </div>
-      <div class="field">
-        <label>自习室 content_id</label>
-        <input id="content_id" type="number" value="3">
+      <div class="row">
+        <div class="field"><label for="duration_hours">时长<span class="optional">小时</span></label><input id="duration_hours" type="number" min="0.5" step="0.5" value="4"></div>
+        <div class="field"><label for="num">使用人数</label><input id="num" type="number" min="1" step="1" value="1"></div>
       </div>
+      <div class="hint" id="timePreview" aria-live="polite"></div>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label>使用日期（留空 = 今天）</label>
-        <input id="date" type="date">
-        <div class="hint">抢当天就留空</div>
+    <div class="settings-section">
+      <h3>座位偏好</h3>
+      <div class="field"><label for="seat_ids">目标座位<span class="optional">可选</span></label><input id="seat_ids" placeholder="点击座位选择，或输入 001, 002"></div>
+      <div class="row preference-row">
+        <div class="field"><label for="keywords">关键词<span class="optional">可选</span></label><input id="keywords" placeholder="例如 靠窗, 电源"></div>
+        <div class="field"><label for="preferred_floor">优先楼层</label><input id="preferred_floor" type="number" min="1" step="1" placeholder="不限"></div>
       </div>
-      <div class="field">
-        <label>开始时间（留空 = 立即）</label>
-        <input id="start_time" type="time" step="3600">
-        <div class="hint">仅支持整点，例如 08:00、18:00</div>
-        <div class="hint" id="timePreview"></div>
-      </div>
+      <label class="check-label" for="avoid_near_door"><input id="avoid_near_door" type="checkbox">避开门口附近座位</label>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label>使用时长（小时）</label>
-        <input id="duration_hours" type="number" min="0.5" step="0.5" value="4">
-      </div>
-      <div class="field">
-        <label>人数</label>
-        <input id="num" type="number" min="1" step="1" value="1">
-      </div>
+    <div class="settings-section">
+      <div class="field"><label for="schedule_at">定时启动<span class="optional">北京时间</span></label><input id="schedule_at" type="datetime-local" step="1"><div class="hint">留空立即启动；座位使用时段在上方设置。</div><div class="hint" id="schedulePreview" aria-live="polite"></div></div>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label>指定座位号（可选，逗号分隔）</label>
-        <input id="seat_ids" placeholder="例如 001, 002">
+    <details class="settings-section advanced">
+      <summary>高级设置<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="advanced-fields">
+        <div class="row">
+          <div class="field"><label for="category_id">自习室 category_id</label><input id="category_id" type="number" value="591"></div>
+          <div class="field"><label for="content_id">自习室 content_id</label><input id="content_id" type="number" value="3"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="poll_interval">轮询间隔<span class="optional">秒</span></label><input id="poll_interval" type="number" min="0" step="1" value="3"></div>
+          <div class="field"><label for="max_attempts">最大尝试次数</label><input id="max_attempts" type="number" min="1" step="1" value="200"></div>
+        </div>
+        <div class="hint">持续尝试，直到预约成功、达到次数或手动停止。</div>
       </div>
-      <div class="field">
-        <label>关键词筛选（可选，逗号分隔）</label>
-        <input id="keywords" placeholder="例如 靠窗, 电源">
-      </div>
-    </div>
+    </details>
 
-    <div class="row">
-      <div class="field">
-        <label>优先楼层（可选）</label>
-        <input id="preferred_floor" type="number" min="1" step="1" placeholder="例如 3">
-      </div>
-      <div class="field check-field">
-        <label>座位偏好</label>
-        <label class="check-label"><input id="avoid_near_door" type="checkbox"> 避开门口附近座位</label>
-      </div>
+    <div class="actions">
+      <button class="btn btn-primary full" id="startBtn" type="button" onclick="start()">开始 / 定时抢座<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+      <button class="btn btn-ghost" type="button" onclick="querySeats()">查询座位</button>
+      <button class="btn btn-ghost" type="button" onclick="dryRun()">试运行（不预约）</button>
+      <button class="btn btn-red full" id="stopBtn" type="button" onclick="stop()" disabled>停止任务</button>
     </div>
+  </section>
 
-    <div class="row">
-      <div class="field">
-        <label>轮询间隔（秒）</label>
-        <input id="poll_interval" type="number" min="0" step="1" value="3">
-      </div>
-      <div class="field">
-        <label>最大尝试次数</label>
-        <input id="max_attempts" type="number" min="1" step="1" value="200">
-      </div>
-    </div>
-    <div class="hint">「开始抢座」会一直重试，直到约到座位、达到次数或你手动停止</div>
+  <div class="results-column">
+    <section class="card seats-card" aria-labelledby="seatsHeading">
+      <div class="panel-head"><div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8M5 12v6h14v-6M7 18v3m10-3v3M9 8h6"/></svg><h2 id="seatsHeading">可预约座位</h2></div><button class="btn btn-query" type="button" onclick="querySeats()"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>查询座位</button></div>
+      <div class="seats-content" id="seats"><div class="empty-note"><div class="empty-title">还没有查询座位</div><div class="empty-copy">填写 Cookie 和使用时段，再点击「查询座位」。</div></div></div>
+      <div class="seat-legend" aria-label="座位状态说明"><span class="legend-item"><i class="legend-mark available" aria-hidden="true"></i>可预约</span><span class="legend-item"><i class="legend-mark selected" aria-hidden="true"></i>已选择</span><span class="legend-item"><i class="legend-mark" aria-hidden="true"></i>不可预约</span></div>
+    </section>
 
-    <div class="field" style="margin-top:12px;">
-      <label>定时启动抢座（可选，留空 = 立即启动）</label>
-      <input id="schedule_at" type="datetime-local" step="1">
-      <div class="hint">按北京时间执行。这是程序开始抢座的时间，不是上面的座位使用时间。</div>
-      <div class="hint" id="schedulePreview"></div>
-    </div>
-
-    <div class="btn-group">
-      <button class="btn btn-ghost" onclick="saveConfig()">保存配置</button>
-      <button class="btn btn-gray" onclick="querySeats()">查询座位</button>
-      <button class="btn btn-primary" onclick="dryRun()">试运行（不预约）</button>
-      <button class="btn btn-green" id="startBtn" onclick="start()">开始 / 定时抢座</button>
-      <button class="btn btn-red full" id="stopBtn" onclick="stop()" disabled>停止</button>
-    </div>
+    <section class="card log-card" aria-labelledby="logHeading">
+      <div class="panel-head"><div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l3 3v15H5V3h3Zm1 5h6m-6 4h6m-6 4h4"/></svg><h2 id="logHeading">运行日志</h2></div></div>
+      <div class="log" id="log"><div class="empty-note">暂无运行记录</div></div>
+    </section>
   </div>
-
-  <!-- 右侧：状态与日志 -->
-  <div>
-    <div class="card" style="margin-bottom:20px;">
-      <h2>可预约座位</h2>
-      <div id="seats"><div class="empty-note">点击「查询座位」查看当前可预约座位</div></div>
-    </div>
-
-    <div class="card">
-      <h2>抢座日志</h2>
-      <div class="log" id="log"><div class="empty-note">暂无记录</div></div>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
+</main>
+<footer class="page-footer">非官方服务，请遵守图书馆预约规则。</footer>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -264,7 +297,7 @@ function updateTimePreview() {
   if (!preview) return;
   const date = $('date').value;
   const time = $('start_time').value;
-  if (!time) { preview.textContent = '未填写开始时间：将按当前时间立即查询'; return; }
+  if (!time) { preview.textContent = '未设开始时间，按当前时间查询。'; return; }
   if (!date) { preview.textContent = '预约日期：今天'; return; }
   const selected = new Date(`${date}T${time}:00+08:00`);
   if (Number.isNaN(selected.getTime())) { preview.textContent = ''; return; }
@@ -283,7 +316,7 @@ function updateSchedulePreview() {
   const preview = $('schedulePreview');
   if (!input || !preview) return;
   const value = input.value;
-  if (!value) { preview.textContent = '未设置：点击后立即开始抢座'; return; }
+  if (!value) { preview.textContent = ''; return; }
   const isoValue = value.length === 16 ? `${value}:00` : value;
   const target = new Date(`${isoValue}+08:00`);
   const diff = target.getTime() - Date.now();
@@ -359,7 +392,7 @@ const STATUS_TEXT = {
 
 function renderLog(history) {
   const log = $('log');
-  if (!history || !history.length) { log.innerHTML = '<div class="empty-note">暂无记录</div>'; return; }
+  if (!history || !history.length) { log.innerHTML = '<div class="empty-note">暂无运行记录</div>'; return; }
   log.innerHTML = history.slice().reverse().map(h => {
     const seat = h.seat ? `<span class="seat-tag">${h.seat.title || h.seat.id || ''}</span>` : '';
     return `<div class="log-item">
@@ -394,9 +427,10 @@ function renderSeats(seats) {
       const title = String(s.title ?? s.name ?? id);
       const selected = selectedValues.has(id) || selectedValues.has(title);
       return `<button type="button" class="seat-chip ${avail ? 'avail' : 'unavail'} ${selected ? 'selected' : ''}"
-        data-seat-id="${escapeHtml(id)}" data-seat-title="${escapeHtml(title)}" ${avail ? '' : 'disabled'}>
+        aria-pressed="${selected}" data-seat-id="${escapeHtml(id)}" data-seat-title="${escapeHtml(title)}" ${avail ? '' : 'disabled'}>
         <div class="title">${escapeHtml(title)}</div>
-        <div class="id">${s.floor ? escapeHtml(s.floor) + ' 楼 · ' : ''}#${escapeHtml(id)}${avail ? ' · 可约' : ''}</div>
+        <div class="id">${s.floor ? escapeHtml(s.floor) + ' 楼 · ' : ''}#${escapeHtml(id)}</div>
+        <span class="seat-state">${selected ? '已选择' : avail ? '可预约' : '不可预约'}</span>
       </button>`;
     }).join('');
     const freeInArea = areaSeats.filter(s => s.available).length;
@@ -405,7 +439,7 @@ function renderSeats(seats) {
       <div class="seats-grid">${cards}</div>
     </section>`;
   }).join('');
-  box.innerHTML = `<div class="seat-summary">共 ${seats.length} 个座位，当前可约 ${availableCount} 个，已选 ${selectedCount} 个。点击绿色座位可选择或取消。</div>${areasHtml}`;
+  box.innerHTML = `<div class="seat-summary">共 ${seats.length} 个座位 · 可约 ${availableCount} 个 · 已选 ${selectedCount} 个</div>${areasHtml}`;
   box.querySelectorAll('.seat-chip.avail').forEach(chip => {
     chip.addEventListener('click', () => toggleSeat(chip.dataset.seatId, chip.dataset.seatTitle));
   });
@@ -454,7 +488,7 @@ async function querySeats() {
     renderSeats(data.seats || []);
     showToast('已查询', 'ok');
   } catch (e) {
-    $('seats').innerHTML = '<div class="empty-note"></div>';
+    $('seats').innerHTML = '<div class="empty-note">查询未完成，请检查配置后重试。</div>';
     showToast(e.message, 'error');
   }
 }

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 import threading
+import uuid
 import webbrowser
 from dataclasses import asdict
 from datetime import datetime
@@ -10,8 +13,9 @@ from pathlib import Path
 from typing import Any
 
 from .client import BEIJING_TZ, HDUClientError, ZhishulibClient
-from .config import Booking, SeatRule, Settings, SpaceCategory, load_settings
+from .config import Booking, EmailSettings, SeatRule, Settings, SpaceCategory, load_settings
 from .hunter import Attempt, SeatHunter
+from .notification import EmailNotificationError, EmailNotifier, booking_email, send_test_email
 
 
 def _status_attempt(status: str, message: str) -> Attempt:
@@ -52,10 +56,19 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "max_attempts": s.max_attempts,
         "request_timeout": s.request_timeout,
         "schedule_at": s.schedule_at,
+        "email_enabled": s.email.enabled,
+        "smtp_host": s.email.smtp_host,
+        "smtp_port": s.email.smtp_port,
+        "smtp_security": s.email.security,
+        "smtp_username": s.email.username,
+        "smtp_password": "",
+        "smtp_password_set": bool(s.email.password),
+        "email_sender": s.email.sender,
+        "email_recipient": s.email.recipient,
     }
 
 
-def dict_to_settings(d: dict[str, Any]) -> Settings:
+def dict_to_settings(d: dict[str, Any], existing: Settings | None = None) -> Settings:
     """从前端表单数据构建 Settings；数值字段做容错转换。"""
     def _cookie(value: Any) -> str:
         """兼容误把 ``{\"cookie\": \"...\"}`` 作为字符串保存的旧配置。"""
@@ -98,6 +111,16 @@ def dict_to_settings(d: dict[str, Any]) -> Settings:
             return value.strip().lower() in {"1", "true", "yes", "on", "y"}
         return bool(value)
 
+    email_data = asdict(existing.email if existing is not None else EmailSettings())
+    email_fields = {"email_enabled": "enabled", "smtp_host": "smtp_host", "smtp_port": "smtp_port", "smtp_security": "security", "smtp_username": "username", "email_sender": "sender", "email_recipient": "recipient"}
+    for flat_key, key in email_fields.items():
+        if flat_key in d:
+            email_data[key] = d[flat_key]
+    if _bool(d.get("smtp_password_clear")):
+        email_data["password"] = ""
+    elif isinstance(d.get("smtp_password"), str) and d["smtp_password"]:
+        email_data["password"] = d["smtp_password"]
+    email = EmailSettings.from_dict(email_data)
     return Settings(
         base_url=(d.get("base_url") or DEFAULT_BASE_URL).strip(),
         cookie=_cookie(d.get("cookie")),
@@ -121,6 +144,7 @@ def dict_to_settings(d: dict[str, Any]) -> Settings:
         max_attempts=_int(d.get("max_attempts"), 8),
         request_timeout=_num(d.get("request_timeout"), 10.0),
         schedule_at=(str(d.get("schedule_at")).strip() or None) if d.get("schedule_at") else None,
+        email=email,
     )
 
 
@@ -149,6 +173,7 @@ def settings_to_nested(s: Settings) -> dict[str, Any]:
         "max_attempts": s.max_attempts,
         "request_timeout": s.request_timeout,
         "schedule_at": s.schedule_at,
+        "email": asdict(s.email),
     }
 
 
@@ -186,10 +211,12 @@ class SeatWebServer:
         self.seat_revision = 0
         self.seat_updated_at: str | None = None
         self.settings = self._load_or_default()
+        self.notification: dict[str, Any] = {"status": "idle" if self.settings.email.enabled else "disabled", "message": "等待预约成功" if self.settings.email.enabled else "尚未启用邮件通知", "at": None}
+        self.notifier = EmailNotifier(self._set_notification)
 
     def _load_or_default(self) -> Settings:
         try:
-            return load_settings(self.config_path)
+            return load_settings(self.config_path, require_cookie=False)
         except Exception:
             return default_settings()
 
@@ -206,6 +233,7 @@ class SeatWebServer:
                 "seats": self.available_seats,
                 "seat_revision": self.seat_revision,
                 "seat_updated_at": self.seat_updated_at,
+                "notification": dict(self.notification),
             }
 
     def _append(self, result: Any) -> dict[str, Any]:
@@ -217,25 +245,73 @@ class SeatWebServer:
 
     # ------------------------------------------------------------------ 动作
     def _persist(self, settings: Settings) -> None:
+        temporary: Path | None = None
         try:
-            self.config_path.write_text(json.dumps(settings_to_nested(settings), ensure_ascii=False, indent=2), encoding="utf-8")
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=self.config_path.parent, prefix=f".{self.config_path.name}.", suffix=".tmp", delete=False) as file:
+                temporary = Path(file.name)
+                json.dump(settings_to_nested(settings), file, ensure_ascii=False, indent=2)
+            os.replace(temporary, self.config_path)
         except OSError:
-            pass  # 持久化失败不影响本次运行
+            raise HDUClientError("配置保存失败，请检查文件权限或磁盘空间") from None
+        finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
+    def _set_notification(self, status: dict[str, Any]) -> None:
+        with self.lock:
+            self.notification = status
+
+    def _settings_for(self, flat: dict[str, Any], *, validate_email: bool = True) -> Settings:
+        with self.lock:
+            existing = self.settings
+        settings = dict_to_settings(flat, existing)
+        if settings.email.enabled and validate_email:
+            try:
+                settings.email.validate()
+            except ValueError as exc:
+                raise HDUClientError(str(exc)) from None
+        return settings
 
     def save_config(self, flat: dict[str, Any]) -> dict[str, Any]:
-        settings = dict_to_settings(flat)
-        if not settings.cookie:
-            raise HDUClientError("请先填写 Cookie")
+        settings = self._settings_for(flat)
         with self.lock:
+            self._persist(settings)
             self.settings = settings
-        self._persist(settings)
+            if self.notification["status"] in {"idle", "disabled"}:
+                self.notification = {"status": "idle" if settings.email.enabled else "disabled", "message": "等待预约成功" if settings.email.enabled else "尚未启用邮件通知", "at": None}
         return settings_to_dict(settings)
 
-    def use_config(self, flat: dict[str, Any]) -> Settings:
-        settings = dict_to_settings(flat)
+    def use_config(self, flat: dict[str, Any], *, validate_email: bool = True) -> Settings:
+        settings = self._settings_for(flat, validate_email=validate_email)
         if not settings.cookie:
             raise HDUClientError("请先填写 Cookie")
         return settings
+
+    def test_email(self, flat: dict[str, Any]) -> dict[str, Any]:
+        settings = self._settings_for(flat, validate_email=False)
+        try:
+            send_test_email(settings.email)
+        except EmailNotificationError as exc:
+            status = {"status": "failed", "message": str(exc), "at": datetime.now(BEIJING_TZ).isoformat(timespec="seconds")}
+            self._set_notification(status)
+            return status
+        status = {"status": "sent", "message": "测试邮件已提交至邮箱服务器，请检查收件箱", "at": datetime.now(BEIJING_TZ).isoformat(timespec="seconds")}
+        self._set_notification(status)
+        return status
+
+    def _handle_result(self, result: Attempt, settings: Settings, task_id: str) -> dict[str, Any]:
+        data = self._append(result)
+        if result.status == "reserved" and settings.email.enabled:
+            try:
+                subject, body = booking_email(settings, result)
+                self.notifier.submit(settings.email, subject, body, task_id)
+            except Exception:
+                self._set_notification({"status": "failed", "message": "邮件通知未能提交，预约已成功", "at": datetime.now(BEIJING_TZ).isoformat(timespec="seconds")})
+        return data
 
     def query_seats(self, settings: Settings) -> list[dict[str, Any]]:
         client = ZhishulibClient(settings)
@@ -253,7 +329,7 @@ class SeatWebServer:
     def run_once(self, settings: Settings, dry_run: bool) -> dict[str, Any]:
         hunter = SeatHunter(settings, on_seats=self._update_seats)
         result = hunter.run_once(dry_run=dry_run)
-        return self._append(result)
+        return self._handle_result(result, settings, uuid.uuid4().hex)
 
     def start(self, flat: dict[str, Any]) -> dict[str, Any]:
         settings = self.use_config(flat)
@@ -261,11 +337,11 @@ class SeatWebServer:
         with self.lock:
             if self.running:
                 raise HDUClientError("抢座任务已经在运行")
+            self._persist(settings)
             self.settings = settings
             self.running = True
             self.waiting = scheduled_timestamp is not None
             self.scheduled_for = settings.schedule_at if scheduled_timestamp is not None else None
-        self._persist(settings)
         self.stop_event.clear()
         self.worker = threading.Thread(target=self._run_loop, args=(settings, scheduled_timestamp), daemon=True)
         self.worker.start()
@@ -276,6 +352,7 @@ class SeatWebServer:
         }
 
     def _run_loop(self, settings: Settings, scheduled_timestamp: float | None = None) -> None:
+        task_id = uuid.uuid4().hex
         try:
             if scheduled_timestamp is not None:
                 # Wait in bounded chunks so very distant schedules do not
@@ -305,7 +382,7 @@ class SeatWebServer:
                 attempt += 1
                 hunter = SeatHunter(current_settings, on_seats=self._update_seats)
                 result = hunter.run_once(dry_run=False)
-                self._append(result)
+                self._handle_result(result, current_settings, task_id)
                 if result.status == "reserved":
                     break
                 self.stop_event.wait(current_settings.poll_interval)
@@ -318,10 +395,12 @@ class SeatWebServer:
     def stop(self) -> None:
         self.stop_event.set()
 
+    def close(self) -> None:
+        self.stop()
+        self.notifier.close()
 
-def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool = False) -> None:
-    app = SeatWebServer(config_path)
 
+def create_http_server(app: SeatWebServer, host: str = "127.0.0.1", port: int = 8765) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def _send(self, code: int, payload: Any, content_type: str = "application/json; charset=utf-8") -> None:
             if isinstance(payload, (dict, list)):
@@ -362,12 +441,18 @@ def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765, *,
                 self._send(404, {"error": "not found"})
 
         def do_POST(self) -> None:
-            body = self._body()
             try:
+                body = self._body()
                 if self.path == "/api/config":
                     self._send(200, app.save_config(body))
+                elif self.path == "/api/email/test":
+                    result = app.test_email(body)
+                    if result["status"] == "failed":
+                        self._send(400, {**result, "error": result["message"]})
+                    else:
+                        self._send(200, result)
                 elif self.path == "/api/seats":
-                    seats = app.query_seats(app.use_config(body))
+                    seats = app.query_seats(app.use_config(body, validate_email=False))
                     self._send(200, {"seats": seats})
                 elif self.path == "/api/run":
                     settings = app.use_config(body.get("config") or body)
@@ -381,13 +466,20 @@ def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765, *,
                     self._send(404, {"error": "not found"})
             except HDUClientError as exc:
                 self._send(400, {"error": str(exc)})
-            except Exception as exc:  # noqa: BLE001 - 兜底返回可读错误
-                self._send(500, {"error": str(exc)})
+            except ValueError:
+                self._send(400, {"error": "请求配置格式无效，请检查输入"})
+            except Exception:  # noqa: BLE001 - Do not expose credential-bearing diagnostics.
+                self._send(500, {"error": "操作失败，请检查配置后重试"})
 
         def log_message(self, *_: Any) -> None:
             return
 
-    server = ThreadingHTTPServer((host, port), Handler)
+    return ThreadingHTTPServer((host, port), Handler)
+
+
+def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool = False) -> None:
+    app = SeatWebServer(config_path)
+    server = create_http_server(app, host, port)
     url = f"http://{host}:{server.server_port}"
     print(f"抢座面板已启动: {url}", flush=True)
     try:
@@ -397,5 +489,5 @@ def serve(config_path: str | Path, host: str = "127.0.0.1", port: int = 8765, *,
     except KeyboardInterrupt:
         pass
     finally:
-        app.stop()
+        app.close()
         server.server_close()

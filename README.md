@@ -41,6 +41,7 @@ sudo apt install ./hdu-library-seat_*_all.deb
 - 按座位编号、关键词、楼层等条件筛选
 - 支持立即预约、指定使用时段和北京时间定时启动
 - 支持试运行，不提交真实预约
+- Web 面板启动的预约任务成功后通过 SMTP 发送邮件，手机邮箱 App 可接收提醒
 - 提供等价的命令行操作
 - Cookie 仅保存在本地配置中，不写入日志
 
@@ -64,7 +65,7 @@ python -m hdu_seat init-config
 python -m hdu_seat serve
 ```
 
-然后打开 <http://127.0.0.1:8765>。Web 面板会把设置写入本地 `config.json`；该文件包含登录 Cookie，已经被 `.gitignore` 排除，请勿提交或分享。
+然后打开 <http://127.0.0.1:8765>。Web 面板会把设置写入本地 `config.json`；该文件包含登录 Cookie，启用邮件后还会保存 SMTP 授权码，已经被 `.gitignore` 排除，请勿提交或分享。
 
 macOS/Linux 激活虚拟环境时使用：
 
@@ -83,6 +84,19 @@ source .venv/bin/activate
 5. 将它粘贴到 Web 面板，或写入本地 `config.json` 的 `cookie` 字段。
 
 Cookie 相当于临时登录凭证。不要提交 `config.json`、粘贴到 Issue，或发送给他人；会话失效后请重新获取。
+
+### 预约成功邮件通知
+
+邮件通知默认关闭。使用你自己的邮箱作为发件账号，并在手机邮箱 App 中登录收件邮箱、开启新邮件提醒；手机无需访问电脑上的本地面板。Web 面板启动的预约任务成功后会发送座位和使用时段信息，邮件发送状态在“邮件通知”卡片单独显示，发送失败不会改变预约成功结果。命令行 `once` / `run` 不发送邮件通知。
+
+1. 在发件邮箱的设置中开启 **SMTP 服务**，按邮箱服务商要求获取 **SMTP 授权码或应用专用密码**。如果服务商要求授权码，请使用授权码，不要填写网页登录密码。
+2. 在面板展开“邮件通知”的邮箱设置，填写服务商提供的 SMTP 服务器、登录账号、授权码和收件邮箱。发件邮箱可留空，默认使用登录账号。
+3. 选择与服务商匹配的加密方式和端口：通常 **SSL / TLS 使用 465**，**STARTTLS 使用 587**；以服务商公布的设置为准。程序只支持这两种加密连接。
+4. 打开“邮件通知”开关，点击 **保存配置**，再点击 **发送测试邮件**。测试邮件不会提交座位预约。确认收件箱能够收到邮件后，再开始预约任务。
+
+“邮件已提交至邮箱服务器”表示 SMTP 服务器已接受邮件；到达收件箱和手机提醒仍取决于邮箱投递及手机设置。如果未收到，请检查垃圾邮件、邮箱规则和手机通知权限。实际发送需要自行提供有效邮箱凭据和可访问 SMTP 服务器的网络，发布包不包含可用发件账号。
+
+授权码保存在本机配置文件中，不属于加密凭据存储；面板重新加载时不会回填授权码明文，留空保存会保留已有授权码。更换时填写新授权码；需要移除时点击“清除已保存授权码”并保存。请像保管 Cookie 一样保管配置文件，不要把授权码或包含它的配置、截图、日志上传到 GitHub。
 
 ### 命令行用法
 
@@ -136,8 +150,18 @@ Web 服务默认只监听 `127.0.0.1:8765`。不要将它绑定到 `0.0.0.0` 或
 | `max_attempts` | 最大尝试次数 |
 | `request_timeout` | 单次网络请求超时秒数 |
 | `schedule_at` | 开始轮询的 ISO 时间；无时区偏移时按北京时间解释，`null` 表示立即 |
+| `email.enabled` | 是否为 Web 预约任务发送成功邮件；默认 `false` |
+| `email.smtp_host` | 邮箱服务商的 SMTP 服务器地址 |
+| `email.smtp_port` | SMTP 端口；默认 `465`，STARTTLS 通常使用 `587` |
+| `email.security` | 加密方式：`ssl` 或 `starttls`；默认 `ssl` |
+| `email.username` | SMTP 登录账号，通常为完整邮箱地址 |
+| `email.password` | SMTP 授权码或应用专用密码，仅保存在本地配置中 |
+| `email.sender` | 发件邮箱；空字符串时使用 `email.username` |
+| `email.recipient` | 接收预约成功通知的邮箱地址 |
 
 “预约使用时间”和 `schedule_at` 不同：前者是实际使用座位的时段，后者只是程序开始发送查询和预约请求的时间。
+
+`email` 是配置文件中的独立对象。未启用时可保留模板中的空字段；启用后请填写有效 SMTP 设置和收件邮箱，并先发送测试邮件。示例模板不含邮箱凭据。
 
 ### 测试
 
@@ -163,6 +187,7 @@ pyproject.toml         打包与项目元数据
 - **提示只支持整点**：将 `booking.start_time` 设置为类似 `08:00`、`18:00` 的整点。
 - **`WinError 10013`**：Windows 防火墙、杀毒软件或当前运行环境阻止了 Python 访问网络，请为当前 Python 进程放行后重试。
 - **需要图形验证码**：当前版本不会绕过验证码，请改用官方页面完成操作。
+- **邮件发送失败**：确认发件邮箱已开启 SMTP、授权码有效且加密方式与端口一致；查看“邮件通知”卡片中的发送状态。预约结果不会因邮件失败而撤销。
 
 ### 参与贡献
 
@@ -188,6 +213,7 @@ Launch **HDU Library Seat Helper** from the applications menu or run `hdu-librar
 - Filter by seat ID, keyword, floor, and other available metadata
 - Reserve immediately, choose a booking window, or schedule polling in Beijing time
 - Dry-run mode that never submits a reservation
+- SMTP email after a successful reservation started from the Web panel, with alerts through your phone's mail app
 - Equivalent command-line workflows
 - Keeps the cookie in local configuration and out of logs
 
@@ -211,7 +237,7 @@ python -m hdu_seat init-config
 python -m hdu_seat serve
 ```
 
-Open <http://127.0.0.1:8765>. The dashboard stores its settings in the local `config.json`. This file contains your login cookie and is excluded by `.gitignore`; never commit or share it.
+Open <http://127.0.0.1:8765>. The dashboard stores its settings in the local `config.json`. This file contains your login cookie and, after configuring email, your SMTP authorization code. It is excluded by `.gitignore`; never commit or share it.
 
 On macOS/Linux, activate the virtual environment with:
 
@@ -230,6 +256,19 @@ You may also run `python -m hdu_seat serve` directly from the project root witho
 5. Paste it into the dashboard or save it under `cookie` in your local `config.json`.
 
 A cookie is a temporary login credential. Never commit `config.json`, post it in an issue, or send it to anyone. Obtain a new cookie after the session expires.
+
+### Reservation email notifications
+
+Email is disabled by default. Use your own mailbox as the sending account, sign in to the recipient mailbox in your phone's mail app, and enable new-mail alerts. Your phone does not need access to the local dashboard. A successful reservation started from the Web panel sends the seat and booking window by email. The email card shows delivery status separately; a mail failure does not change the successful reservation. CLI `once` / `run` commands do not send email notifications.
+
+1. Enable **SMTP** in your sending mailbox's settings and obtain the **SMTP authorization code or app password** required by your provider. Use that code instead of your website sign-in password when the provider requires it.
+2. Expand the email settings in the dashboard. Enter your provider's SMTP host, login account, authorization code, and recipient address. The sender address can be blank to use the login account.
+3. Choose the provider's encryption mode and port. **SSL / TLS usually uses 465**; **STARTTLS usually uses 587**. Follow your provider's settings. Both supported modes use encrypted connections.
+4. Enable email notifications, click **保存配置** (Save configuration), then **发送测试邮件** (Send test email). This test does not submit a seat reservation. Check your inbox before starting a booking task.
+
+A message saying that mail was submitted to the mail server means the SMTP server accepted it. Inbox delivery and phone alerts depend on your mailbox and phone settings. Check spam, mail rules, and notification permissions if it does not arrive. Sending real mail requires your own valid mailbox credentials and network access to its SMTP server; releases contain no usable sending account.
+
+The authorization code is saved in your local configuration file, which is not an encrypted credential store. The dashboard does not fill the saved code back into the password field; leaving that field blank preserves it. Enter a new code to replace it, or use **清除已保存授权码** (Clear saved authorization code) and save to remove it. Keep the file private and never upload credentials, configuration files, screenshots, or logs containing them to GitHub.
 
 ### Command-line usage
 
@@ -283,8 +322,18 @@ Copy [`config.example.json`](config.example.json) or run `init-config` to create
 | `max_attempts` | Maximum number of attempts |
 | `request_timeout` | Timeout for one network request, in seconds |
 | `schedule_at` | ISO time at which polling starts; interpreted as Beijing time when no offset is present, or `null` for immediate start |
+| `email.enabled` | Send mail after a successful Web reservation task; defaults to `false` |
+| `email.smtp_host` | Your mail provider's SMTP hostname |
+| `email.smtp_port` | SMTP port; defaults to `465`, or usually `587` for STARTTLS |
+| `email.security` | `ssl` or `starttls`; defaults to `ssl` |
+| `email.username` | SMTP login account, usually the complete email address |
+| `email.password` | SMTP authorization code or app password stored in local configuration |
+| `email.sender` | Sender address; an empty string uses `email.username` |
+| `email.recipient` | Mailbox that receives reservation notifications |
 
 The booking window and `schedule_at` are separate: the former defines when the seat will be used, while the latter defines when the program starts querying and sending reservation requests.
+
+`email` is a separate object in the configuration file. Leave its example fields empty while notifications are disabled. Before enabling it, provide valid SMTP settings and a recipient, then send a test email. The example contains no mailbox credentials.
 
 ### Tests
 
@@ -310,6 +359,7 @@ pyproject.toml         Packaging and project metadata
 - **Whole-hour start required**: use a time such as `08:00` or `18:00`.
 - **`WinError 10013`**: allow the current Python process through Windows Firewall, antivirus, or other network controls.
 - **Image CAPTCHA required**: this project does not bypass CAPTCHAs; complete the operation through the official page.
+- **Email failed**: verify that SMTP is enabled, the authorization code is valid, and encryption matches the port. Check the email card for delivery status. A failed notification does not undo the reservation.
 
 ### Contributing
 

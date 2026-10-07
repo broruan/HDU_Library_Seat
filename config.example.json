@@ -20,5 +20,15 @@
   "poll_interval": 3,
   "max_attempts": 200,
   "request_timeout": 10,
-  "schedule_at": null
+  "schedule_at": null,
+  "email": {
+    "enabled": false,
+    "smtp_host": "",
+    "smtp_port": 465,
+    "security": "ssl",
+    "username": "",
+    "password": "",
+    "sender": "",
+    "recipient": ""
+  }
 }

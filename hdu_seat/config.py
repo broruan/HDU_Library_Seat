@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,54 @@ class Booking:
 
 
 @dataclass
+class EmailSettings:
+    enabled: bool = False
+    smtp_host: str = ""
+    smtp_port: int = 465
+    security: str = "ssl"
+    username: str = ""
+    password: str = field(default="", repr=False)
+    sender: str = ""
+    recipient: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> "EmailSettings":
+        if data is None:
+            return cls()
+        if not isinstance(data, dict):
+            raise ValueError("邮件配置必须是对象")
+        values = {key: value for key, value in data.items() if key in cls.__dataclass_fields__}
+        enabled = values.get("enabled", False)
+        values["enabled"] = enabled.strip().lower() in {"1", "true", "yes", "on"} if isinstance(enabled, str) else bool(enabled)
+        try:
+            port = values.get("smtp_port", 465)
+            values["smtp_port"] = int(str(port)) if not isinstance(port, bool) else 0
+        except (ValueError, TypeError):
+            values["smtp_port"] = 0
+        for key in ("smtp_host", "security", "username", "sender", "recipient"):
+            value = values.get(key, getattr(cls(), key))
+            values[key] = value.strip() if isinstance(value, str) else ""
+        password = values.get("password", "")
+        values["password"] = password if isinstance(password, str) else ""
+        return cls(**values)
+
+    def validate(self) -> None:
+        if not self.smtp_host or any(c.isspace() or c in "/\\?#" or ord(c) < 32 for c in self.smtp_host):
+            raise ValueError("请填写有效的 SMTP 服务器地址")
+        if isinstance(self.smtp_port, bool) or not isinstance(self.smtp_port, int) or not 1 <= self.smtp_port <= 65535:
+            raise ValueError("SMTP 端口必须是 1 到 65535 的整数")
+        if self.security not in {"ssl", "starttls"}:
+            raise ValueError("邮件加密方式必须是 SSL 或 STARTTLS")
+        if not self.username or any(c in self.username for c in "\r\n"):
+            raise ValueError("请填写 SMTP 登录账号")
+        if not self.password:
+            raise ValueError("请填写 SMTP 授权码")
+        for address, label in ((self.sender or self.username, "发件邮箱"), (self.recipient, "收件邮箱")):
+            if not re.fullmatch(r"[^\s@<>;,]+@[^\s@<>;,]+", address) or any(ord(c) < 32 or ord(c) == 127 for c in address):
+                raise ValueError(f"请填写有效的{label}，仅支持一个邮箱地址")
+
+
+@dataclass
 class Settings:
     base_url: str
     cookie: str
@@ -59,9 +108,10 @@ class Settings:
     # time when no explicit UTC offset is present (ISO 8601 string).
     schedule_at: str | None = None
     user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HDU-Library-Seat/0.2"
+    email: EmailSettings = field(default_factory=EmailSettings)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Settings":
+    def from_dict(cls, data: dict[str, Any], *, require_cookie: bool = True) -> "Settings":
         base_url = data.get("base_url")
         if not base_url:
             raise ValueError("base_url is required")
@@ -96,18 +146,21 @@ class Settings:
                     decoded = None
                 if isinstance(decoded, dict) and isinstance(decoded.get("cookie"), str):
                     cookie = decoded["cookie"].strip()
-        if not cookie:
+        if not cookie and require_cookie:
             raise ValueError("cookie is required (set it in config or HDU_LIBRARY_COOKIE)")
 
+        email = EmailSettings.from_dict(data.get("email"))
+        if email.enabled and require_cookie:
+            email.validate()
         values = {
             k: v
             for k, v in data.items()
-            if k in cls.__dataclass_fields__ and k not in {"cookie", "space_category", "rule", "booking"}
+            if k in cls.__dataclass_fields__ and k not in {"cookie", "space_category", "rule", "booking", "email"}
         }
-        return cls(cookie=cookie, space_category=space_category, rule=rule, booking=booking, **values)
+        return cls(cookie=cookie, space_category=space_category, rule=rule, booking=booking, email=email, **values)
 
 
-def load_settings(path: str | os.PathLike[str]) -> Settings:
+def load_settings(path: str | os.PathLike[str], *, require_cookie: bool = True) -> Settings:
     source = Path(path)
     if not source.exists():
         raise FileNotFoundError(f"配置文件不存在: {source}")
@@ -115,4 +168,4 @@ def load_settings(path: str | os.PathLike[str]) -> Settings:
         data = json.load(fh)
     if not isinstance(data, dict):
         raise ValueError("configuration must be a JSON object")
-    return Settings.from_dict(data)
+    return Settings.from_dict(data, require_cookie=require_cookie)

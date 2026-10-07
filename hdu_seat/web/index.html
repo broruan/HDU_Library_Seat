@@ -39,13 +39,13 @@
   .dot.waiting { background: var(--orange); animation: pulse 2s ease-in-out infinite; }
   .dot.success { background: var(--green); }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 #16815d22; } 50% { box-shadow: 0 0 0 4px #16815d00; opacity: .6; } }
-  .workspace-note { position: sticky; top: 0; z-index: 40; max-width: 1344px; margin: auto; padding: 12px 32px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 20px; background: var(--bg); color: var(--muted); font-size: 13px; }
+  .workspace-note { max-width: 1344px; margin: auto; padding: 12px 32px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 20px; background: var(--bg); color: var(--muted); font-size: 13px; }
   .default-message { grid-column: 1; grid-row: 1; }
-  .workspace-note:has(.toast.show) .default-message, .workspace-note:has(.toast.show) .timezone { visibility: hidden; }
   .timezone { grid-column: 2; grid-row: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .layout { display: grid; grid-template-columns: 392px minmax(0, 1fr); align-items: start; gap: 24px; padding: 0 32px 32px; max-width: 1344px; margin: auto; }
-  .card { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 3px 12px #20345304; overflow: hidden; animation: enter 380ms var(--ease) both; }
-  .results-column { display: grid; gap: 24px; min-width: 0; }
+  .layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; padding: 0 32px 32px; max-width: 1344px; margin: auto; }
+  .config-card { flex: 1 1 392px; }
+  .card { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 3px 12px #20345304; overflow: hidden; animation: enter 380ms var(--ease) backwards; }
+  .results-column { display: grid; gap: 24px; min-width: 0; flex: 999 1 420px; }
   .seats-card { animation-delay: 60ms; }
   .log-card { animation-delay: 120ms; }
   @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -139,13 +139,58 @@
   .badge.stopped { background: #fff4e7; color: #a5620e; }
   .log-msg { font-size: 13px; overflow-wrap: anywhere; line-height: 1.85; }
   .seat-tag { font-family: ui-monospace, Consolas, monospace; background: #f1f4f8; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-  .toast { grid-column: 1 / -1; grid-row: 1; min-height: 40px; display: flex; align-items: center; background: #e8edf5; color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity 200ms, transform 200ms var(--ease), visibility 200ms; pointer-events: none; }
-  .toast.show { opacity: 1; visibility: visible; transform: translateY(0); }
+  .toast { position: fixed; top: 18px; left: 50%; z-index: 80; width: min(680px, calc(100% - 32px)); min-height: 40px; display: flex; align-items: center; background: #e8edf5; color: var(--text); padding: 10px 16px; border-radius: 10px; box-shadow: 0 5px 24px #20345316; font-size: 14px; overflow-wrap: anywhere; opacity: 0; visibility: hidden; transform: translate(-50%, 4px); transition: opacity 200ms, transform 200ms var(--ease), visibility 200ms; pointer-events: none; }
+  .toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
   .toast.error { background: #fff0f1; color: #b43747; }
   .toast.ok { background: #e8f6ef; color: #176c51; }
   .page-footer { max-width: 1344px; margin: auto; padding: 0 32px 24px; color: var(--muted); font-size: 12px; }
+  .field label, .btn, .settings-section h3, .advanced summary { font-size: 14px; }
+  .hint, .optional, .seat-legend, .seat-state, .seat-area-count { font-size: 13px; }
+  .card { box-shadow: 0 4px 20px #20345305; }
+  .task-overview { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; padding: 19px 24px; background: #eaf1fc; border: 1px solid #d8e5f9; border-radius: 14px; animation: enter 320ms var(--ease) both; }
+  .overview-label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 3px; }
+  .overview-value { display: block; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .email-card { animation-delay: 100ms; }
+  .email-dirty { color: var(--orange); font-size: 13px; font-weight: 400; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .toggle input { appearance: none; position: relative; width: 36px; height: 22px; margin: 0; border-radius: 999px; background: #b2bdcc; transition: background 180ms; cursor: pointer; flex-shrink: 0; }
+  .toggle input::after { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px #20345322; transition: transform 180ms var(--ease); }
+  .toggle input:checked { background: var(--primary); }
+  .toggle input:checked::after { transform: translateX(14px); }
+  .toggle input:focus-visible { outline: 3px solid #93b6ff; outline-offset: 3px; }
+  .email-content { padding: 18px 24px 20px; }
+  .email-copy { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .notification-status { display: flex; gap: 10px; align-items: flex-start; background: #f5f7fb; padding: 12px 14px; border-radius: 9px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .notification-status .mail-dot { width: 7px; height: 7px; border-radius: 50%; background: #8895a8; margin-top: 7px; flex-shrink: 0; }
+  .notification-status[data-status='sent'] { background: #eaf7f0; color: #176c51; }
+  .notification-status[data-status='sent'] .mail-dot { background: var(--green); }
+  .notification-status[data-status='failed'] { background: #fff0f1; color: #b43747; }
+  .notification-status[data-status='failed'] .mail-dot { background: var(--red); }
+  .notification-status[data-status='pending'], .notification-status[data-status='sending'] { background: var(--primary-soft); color: var(--primary-dark); }
+  .notification-status[data-status='pending'] .mail-dot, .notification-status[data-status='sending'] .mail-dot { background: var(--primary); animation: pulse 1.6s ease-in-out infinite; }
+  .email-details { margin-top: 14px; }
+  .email-details summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; font-size: 14px; padding: 6px 0; }
+  .email-details summary::-webkit-details-marker { display: none; }
+  .email-details summary svg { color: var(--muted); transition: transform 180ms var(--ease); }
+  .email-details[open] summary svg { transform: rotate(180deg); }
+  .email-form { padding-top: 16px; }
+  .email-details[open] .email-form { animation: enter 220ms var(--ease); }
+  .email-form .row { margin-bottom: 12px; }
+  .email-form .field { margin-bottom: 0; }
+  .smtp-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(80px, .65fr); }
+  .email-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+  .email-actions .btn { font-size: 13px; }
+  .text-button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .password-hint { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; }
+  .btn[aria-busy='true']::before { content: ''; width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 700ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn[aria-busy='true'] { cursor: progress; }
+  .actions { border-bottom: 1px solid var(--border); background: #f8faff; }
+  @media (max-width: 1050px) { .email-content, .task-overview { padding-inline: 20px; } .smtp-row { grid-template-columns: minmax(0, 1fr) minmax(80px, .7fr); } .smtp-host { grid-column: 1 / -1; } }
+  @media (max-width: 480px) { .email-content, .task-overview { padding-inline: 18px; } .task-overview { gap: 14px; } .overview-value { font-size: 14px; } .email-form .row:not(.smtp-row) { grid-template-columns: minmax(0, 1fr); gap: 14px; } .email-actions .btn { flex: 1; } #startBtn { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 14px; right: 14px; z-index: 60; min-height: 48px; box-shadow: 0 4px 24px #2563eb30; } body[data-running='true'] #startBtn { display: none; } body[data-running='true'] #stopBtn { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 14px; right: 14px; z-index: 60; min-height: 48px; background: var(--red); color: white; box-shadow: 0 4px 24px #c43d4c30; } .page-footer { padding-bottom: 90px; } body { scroll-padding-bottom: 90px; } }
   @media (max-width: 1050px) {
-    .layout { grid-template-columns: 360px minmax(0, 1fr); gap: 20px; padding-inline: 24px; }
+    .layout { gap: 20px; padding-inline: 24px; }
+    .config-card { flex-basis: 360px; }
     .header-inner, .workspace-note { padding-inline: 24px; }
     .panel-head, .settings-section { padding-inline: 20px; }
     .advanced { padding-inline: 0; }
@@ -154,7 +199,7 @@
     .log-time { grid-column: 1 / -1; }
   }
   @media (max-width: 820px) {
-    .layout { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
+    .layout { max-width: 620px; }
     .workspace-note { max-width: 620px; }
     .timezone { display: none; }
     .results-column { gap: 20px; }
@@ -203,6 +248,13 @@
   <section class="card config-card" aria-labelledby="configHeading">
     <div class="panel-head"><h2 id="configHeading">预约设置</h2><button class="btn btn-save" type="button" onclick="saveConfig()"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8"/></svg>保存配置</button></div>
 
+    <div class="actions">
+      <button class="btn btn-primary full" id="startBtn" type="button" onclick="start()">开始 / 定时抢座<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+      <button class="btn btn-ghost" type="button" onclick="querySeats()">查询座位</button>
+      <button class="btn btn-ghost" type="button" onclick="dryRun()">试运行（不预约）</button>
+      <button class="btn btn-red full" id="stopBtn" type="button" onclick="stop()" disabled>停止任务</button>
+    </div>
+
     <div class="settings-section">
       <div class="field"><label for="cookie">登录 Cookie</label><textarea id="cookie" placeholder="粘贴浏览器登录后的完整 Cookie" spellcheck="false" autocomplete="off"></textarea></div>
     </div>
@@ -249,19 +301,48 @@
       </div>
     </details>
 
-    <div class="actions">
-      <button class="btn btn-primary full" id="startBtn" type="button" onclick="start()">开始 / 定时抢座<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
-      <button class="btn btn-ghost" type="button" onclick="querySeats()">查询座位</button>
-      <button class="btn btn-ghost" type="button" onclick="dryRun()">试运行（不预约）</button>
-      <button class="btn btn-red full" id="stopBtn" type="button" onclick="stop()" disabled>停止任务</button>
-    </div>
   </section>
 
   <div class="results-column">
+    <div class="task-overview" aria-label="当前预约设置">
+      <div><span class="overview-label">使用时段</span><span class="overview-value" id="bookingSummary">今天 · 立即开始 · 4 小时</span></div>
+      <div><span class="overview-label">目标座位</span><span class="overview-value" id="selectionSummary">不限座位</span></div>
+    </div>
     <section class="card seats-card" aria-labelledby="seatsHeading">
       <div class="panel-head"><div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8M5 12v6h14v-6M7 18v3m10-3v3M9 8h6"/></svg><h2 id="seatsHeading">可预约座位</h2></div><button class="btn btn-query" type="button" onclick="querySeats()"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>查询座位</button></div>
       <div class="seats-content" id="seats"><div class="empty-note"><div class="empty-title">还没有查询座位</div><div class="empty-copy">填写 Cookie 和使用时段，再点击「查询座位」。</div></div></div>
       <div class="seat-legend" aria-label="座位状态说明"><span class="legend-item"><i class="legend-mark available" aria-hidden="true"></i>可预约</span><span class="legend-item"><i class="legend-mark selected" aria-hidden="true"></i>已选择</span><span class="legend-item"><i class="legend-mark" aria-hidden="true"></i>不可预约</span></div>
+    </section>
+
+    <section class="card email-card" aria-labelledby="emailHeading">
+      <div class="panel-head">
+        <div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><h2 id="emailHeading">邮件通知</h2><span class="email-dirty" id="emailDirty" hidden>未保存</span></div>
+        <label class="toggle" for="email_enabled"><input id="email_enabled" type="checkbox" role="switch" aria-label="启用预约成功邮件通知"><span id="emailToggleLabel">未启用</span></label>
+      </div>
+      <div class="email-content">
+        <p class="email-copy" id="emailSummary">预约成功后，将座位与使用时段发送到你的邮箱。</p>
+        <div id="notificationStatus" class="notification-status" data-status="disabled" role="status" aria-live="polite"><span class="mail-dot" aria-hidden="true"></span><span id="notificationMessage">尚未启用邮件通知</span></div>
+        <details class="email-details" id="emailDetails">
+          <summary>配置邮箱<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="email-form">
+            <div class="row smtp-row">
+              <div class="field smtp-host"><label for="smtp_host">SMTP 服务器</label><input id="smtp_host" placeholder="smtp.qq.com" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="smtp_security">加密方式</label><select id="smtp_security"><option value="ssl">SSL / TLS</option><option value="starttls">STARTTLS</option></select></div>
+              <div class="field"><label for="smtp_port">端口</label><input id="smtp_port" type="number" min="1" max="65535" value="465"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="smtp_username">登录账号</label><input id="smtp_username" placeholder="你的邮箱账号" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="smtp_password">SMTP 授权码</label><input id="smtp_password" type="password" placeholder="填写邮箱提供的授权码" autocomplete="new-password"><div class="hint password-hint"><span id="passwordHint">在邮箱设置中开启 SMTP 并获取授权码。</span><button class="text-button" id="clearPasswordBtn" type="button" onclick="clearEmailPassword()" hidden>清除已保存授权码</button></div></div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="email_sender">发件邮箱<span class="optional">默认同登录账号</span></label><input id="email_sender" type="email" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="email_recipient">收件邮箱</label><input id="email_recipient" type="email" placeholder="接收提醒的邮箱" autocomplete="off" spellcheck="false"></div>
+            </div>
+            <div class="email-actions"><button class="btn btn-query" id="testEmailBtn" type="button" onclick="testEmail()">发送测试邮件</button><button class="btn btn-ghost" id="saveEmailBtn" type="button" onclick="saveConfig()">保存配置</button></div>
+            <p class="hint">启用并保存后生效。</p>
+          </div>
+        </details>
+      </div>
     </section>
 
     <section class="card log-card" aria-labelledby="logHeading">
@@ -278,6 +359,93 @@ let lastQueriedSeats = [];
 let lastSeatRevision = -1;
 let taskIsRunning = false;
 let selectionSaveTimer = null;
+let clearSmtpPassword = false;
+let emailTestBusy = false;
+let startBusy = false;
+let emailConfigDirty = false;
+
+function updateOverview() {
+  const date = $('date').value || '今天';
+  const time = $('start_time').value || '立即开始';
+  $('bookingSummary').textContent = `${date} · ${time} · ${$('duration_hours').value || 4} 小时`;
+  const seats = splitList($('seat_ids').value);
+  $('selectionSummary').textContent = seats.length ? `已选 ${seats.length} 个座位` : '不限座位';
+  if (!startBusy) $('startBtn').childNodes[0].textContent = $('schedule_at').value ? '设定定时抢座' : '开始抢座';
+}
+
+function setBusy(button, busy, label) {
+  if (!button.dataset.idleMarkup) button.dataset.idleMarkup = button.innerHTML;
+  button.disabled = busy;
+  button.setAttribute('aria-busy', String(busy));
+  if (busy) button.textContent = label;
+  else button.innerHTML = button.dataset.idleMarkup;
+}
+
+function syncPasswordState(cfg) {
+  emailConfigDirty = false;
+  $('emailDirty').hidden = true;
+  clearSmtpPassword = false;
+  $('smtp_password').value = '';
+  $('smtp_password').placeholder = cfg.smtp_password_set ? '已保存，留空保留原授权码' : '填写邮箱提供的授权码';
+  $('passwordHint').textContent = cfg.smtp_password_set ? '授权码已保存；填写新值可替换。' : '在邮箱设置中开启 SMTP 并获取授权码。';
+  $('clearPasswordBtn').hidden = !cfg.smtp_password_set;
+  $('emailSummary').textContent = cfg.email_enabled && cfg.email_recipient
+    ? `预约成功后，发送到 ${cfg.email_recipient}。`
+    : '预约成功后，将座位与使用时段发送到你的邮箱。';
+}
+
+function clearEmailPassword() {
+  markEmailDirty();
+  clearSmtpPassword = true;
+  $('smtp_password').value = '';
+  $('smtp_password').placeholder = '填写新的 SMTP 授权码';
+  $('passwordHint').textContent = '保存配置后清除原授权码。';
+  $('clearPasswordBtn').hidden = true;
+}
+
+function renderNotification(notification) {
+  if (emailTestBusy) return;
+  const n = notification || {};
+  const status = n.status || ($('email_enabled').checked ? 'idle' : 'disabled');
+  const fallback = { disabled: '尚未启用邮件通知', idle: '等待预约成功', pending: '邮件已加入发送队列', sending: '正在发送邮件…', sent: '邮件已提交至邮箱服务器', failed: '邮件发送失败，请检查邮箱配置' };
+  $('notificationStatus').dataset.status = status;
+  $('notificationMessage').textContent = emailConfigDirty && ['disabled', 'idle'].includes(status)
+    ? '邮件设置未保存，保存后生效。'
+    : (n.message || fallback[status] || fallback.idle);
+}
+
+function markEmailDirty() {
+  emailConfigDirty = true;
+  $('emailDirty').hidden = false;
+  if (['disabled', 'idle'].includes($('notificationStatus').dataset.status)) $('notificationMessage').textContent = '邮件设置未保存，保存后生效。';
+}
+
+function updateEmailToggle(openSettings = false) {
+  const enabled = $('email_enabled').checked;
+  $('emailToggleLabel').textContent = enabled ? '已开启' : '未启用';
+  if (enabled && openSettings) $('emailDetails').open = true;
+}
+
+async function testEmail() {
+  emailTestBusy = true;
+  const button = $('testEmailBtn');
+  setBusy(button, true, '正在发送…');
+  $('notificationStatus').dataset.status = 'sending';
+  $('notificationMessage').textContent = '正在连接邮箱服务器并发送测试邮件…';
+  try {
+    const result = await api('POST', '/api/email/test', collectConfig());
+    emailTestBusy = false;
+    renderNotification({ status: 'sent', message: result.message || '测试邮件已提交，请检查收件箱。' });
+    showToast('测试邮件已提交，请检查收件箱', 'ok');
+  } catch (e) {
+    emailTestBusy = false;
+    renderNotification({ status: 'failed', message: e.message });
+    showToast(e.message, 'error');
+  } finally {
+    emailTestBusy = false;
+    setBusy(button, false);
+  }
+}
 
 function showToast(msg, type) {
   const t = $('toast');
@@ -344,6 +512,15 @@ function collectConfig() {
     max_attempts: $('max_attempts').value,
     request_timeout: 10,
     schedule_at: $('schedule_at').value || null,
+    email_enabled: $('email_enabled').checked,
+    smtp_host: $('smtp_host').value.trim(),
+    smtp_port: $('smtp_port').value,
+    smtp_security: $('smtp_security').value,
+    smtp_username: $('smtp_username').value.trim(),
+    smtp_password: $('smtp_password').value,
+    smtp_password_clear: clearSmtpPassword,
+    email_sender: $('email_sender').value.trim(),
+    email_recipient: $('email_recipient').value.trim(),
   };
 }
 
@@ -381,6 +558,16 @@ function fillForm(cfg) {
   $('poll_interval').value = cfg.poll_interval ?? 3;
   $('max_attempts').value = cfg.max_attempts ?? 200;
   $('schedule_at').value = savedSchedule && savedSchedule > beijingNow ? savedSchedule : '';
+  $('email_enabled').checked = Boolean(cfg.email_enabled);
+  $('smtp_host').value = cfg.smtp_host || '';
+  $('smtp_port').value = cfg.smtp_port ?? 465;
+  $('smtp_security').value = cfg.smtp_security || 'ssl';
+  $('smtp_username').value = cfg.smtp_username || '';
+  $('email_sender').value = cfg.email_sender || '';
+  $('email_recipient').value = cfg.email_recipient || '';
+  syncPasswordState(cfg);
+  updateEmailToggle();
+  updateOverview();
   updateTimePreview();
   updateSchedulePreview();
 }
@@ -394,7 +581,7 @@ function renderLog(history) {
   const log = $('log');
   if (!history || !history.length) { log.innerHTML = '<div class="empty-note">暂无运行记录</div>'; return; }
   log.innerHTML = history.slice().reverse().map(h => {
-    const seat = h.seat ? `<span class="seat-tag">${h.seat.title || h.seat.id || ''}</span>` : '';
+    const seat = h.seat ? `<span class="seat-tag">${escapeHtml(h.seat.title || h.seat.id || '')}</span>` : '';
     return `<div class="log-item">
       <span class="log-time">${(h.at || '').replace('T', ' ')}</span>
       <span class="badge ${h.status}">${STATUS_TEXT[h.status] || h.status}</span>
@@ -408,6 +595,7 @@ function escapeHtml(s) {
 }
 
 function renderSeats(seats) {
+  updateOverview();
   const box = $('seats');
   lastQueriedSeats = seats || [];
   if (!seats || !seats.length) { box.innerHTML = '<div class="empty-note">当前无可预约座位</div>'; return; }
@@ -460,7 +648,8 @@ function queueSelectionSave() {
   clearTimeout(selectionSaveTimer);
   selectionSaveTimer = setTimeout(async () => {
     try {
-      await api('POST', '/api/config', collectConfig());
+      const cfg = await api('POST', '/api/config', collectConfig());
+      syncPasswordState(cfg);
       showToast(taskIsRunning ? '目标座位已更新，将在下一轮生效' : '目标座位已保存', 'ok');
     } catch (e) {
       showToast(`目标座位保存失败：${e.message}`, 'error');
@@ -476,13 +665,20 @@ async function loadConfig() {
 }
 
 async function saveConfig() {
+  const buttons = [...document.querySelectorAll('button[onclick="saveConfig()"]')];
+  buttons.forEach(button => setBusy(button, true, '保存中…'));
   try {
-    await api('POST', '/api/config', collectConfig());
+    const cfg = await api('POST', '/api/config', collectConfig());
+    syncPasswordState(cfg);
     showToast(taskIsRunning ? '配置已保存，将在下一轮抢座生效' : '配置已保存', 'ok');
+    refreshStatus();
   } catch (e) { showToast(e.message, 'error'); }
+  finally { buttons.forEach(button => setBusy(button, false)); }
 }
 
 async function querySeats() {
+  const buttons = [...document.querySelectorAll('button[onclick="querySeats()"]')];
+  buttons.forEach(button => setBusy(button, true, '查询中…'));
   try {
     const data = await api('POST', '/api/seats', collectConfig());
     renderSeats(data.seats || []);
@@ -491,6 +687,7 @@ async function querySeats() {
     $('seats').innerHTML = '<div class="empty-note">查询未完成，请检查配置后重试。</div>';
     showToast(e.message, 'error');
   }
+  finally { buttons.forEach(button => setBusy(button, false)); }
 }
 
 async function dryRun() {
@@ -502,11 +699,14 @@ async function dryRun() {
 }
 
 async function start() {
+  startBusy = true;
+  setBusy($('startBtn'), true, '正在启动…');
   try {
     const data = await api('POST', '/api/start', collectConfig());
     showToast(data.waiting ? `已设定，将在 ${String(data.scheduled_for).replace('T', ' ')} 开始` : '已开始抢座', 'ok');
     refreshStatus();
   } catch (e) { showToast(e.message, 'error'); }
+  finally { startBusy = false; setBusy($('startBtn'), false); updateOverview(); refreshStatus(); }
 }
 
 async function stop() {
@@ -521,13 +721,15 @@ async function refreshStatus() {
   try {
     const s = await api('GET', '/api/status');
     taskIsRunning = Boolean(s.running);
+    document.body.dataset.running = String(taskIsRunning);
     const dot = $('dot'), label = $('runLabel');
     if (s.waiting) { dot.className = 'dot waiting'; label.textContent = `等待至 ${String(s.scheduled_for || '').replace('T', ' ')}`; }
     else if (s.running) { dot.className = 'dot running'; label.textContent = '抢座中…'; }
     else if (s.last_result && s.last_result.status === 'reserved') { dot.className = 'dot success'; label.textContent = '已约到座位'; }
     else { dot.className = 'dot'; label.textContent = '空闲'; }
-    $('startBtn').disabled = s.running;
+    $('startBtn').disabled = s.running || startBusy;
     $('stopBtn').disabled = !s.running;
+    renderNotification(s.notification);
     renderLog(s.history || []);
     // While the task is running, display the exact snapshot obtained by its
     // latest poll instead of issuing an extra upstream request.
@@ -542,6 +744,11 @@ loadConfig();
 refreshStatus();
 ['date', 'start_time'].forEach(id => $(id).addEventListener('input', updateTimePreview));
 $('schedule_at').addEventListener('input', updateSchedulePreview);
+['date', 'start_time', 'duration_hours', 'seat_ids', 'schedule_at'].forEach(id => $(id).addEventListener('input', updateOverview));
+$('email_enabled').addEventListener('change', () => { updateEmailToggle(true); markEmailDirty(); });
+$('smtp_security').addEventListener('change', () => { $('smtp_port').value = $('smtp_security').value === 'starttls' ? 587 : 465; markEmailDirty(); });
+['smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'email_sender', 'email_recipient'].forEach(id => $(id).addEventListener('input', markEmailDirty));
+$('smtp_password').addEventListener('input', () => { if ($('smtp_password').value) clearSmtpPassword = false; });
 updateTimePreview();
 updateSchedulePreview();
 setInterval(refreshStatus, 1500);

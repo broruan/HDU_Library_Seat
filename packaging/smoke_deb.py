@@ -8,11 +8,26 @@ import signal
 import subprocess
 import tempfile
 import time
+import urllib.error
 import urllib.request
 
 
 def main() -> None:
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    installed_package = Path("/usr/lib/hdu-library-seat/hdu_seat")
+    assert (installed_package / "notification.py").is_file()
+    email_fields = {
+        "email_enabled", "smtp_host", "smtp_port", "smtp_security", "smtp_username",
+        "smtp_password", "smtp_password_set", "email_sender", "email_recipient",
+    }
+    placeholder_password = "smoke-test-authorization-placeholder"
+
+    def post_config(url: str, config: dict) -> dict:
+        request = urllib.request.Request(url + "/api/config", data=json.dumps(config).encode(),
+                                         headers={"Content-Type": "application/json"})
+        with opener.open(request, timeout=5) as response:
+            return json.load(response)
+
     with tempfile.TemporaryDirectory(prefix="hdu-installed-test-") as temporary:
         work = Path(temporary)
         browser = work / "browser.py"
@@ -45,19 +60,67 @@ def main() -> None:
                     with opener.open(url + "/api/config", timeout=5) as response:
                         config = json.load(response)
                     assert config["cookie"] == ("" if attempt == 0 else "smoke-test-placeholder")
+                    assert email_fields <= config.keys()
+                    assert config["smtp_password"] == ""
                     if attempt == 0:
+                        assert config["email_enabled"] is False
+                        assert config["smtp_password_set"] is False
+                        config.update({
+                            "email_enabled": False,
+                            "smtp_host": "smtp.example.invalid",
+                            "smtp_port": 465,
+                            "smtp_security": "ssl",
+                            "smtp_username": "smoke-sender@example.invalid",
+                            "smtp_password": placeholder_password,
+                            "email_sender": "",
+                            "email_recipient": "",
+                        })
+                        saved = post_config(url, config)
+                        assert saved["cookie"] == ""
+                        assert saved["email_enabled"] is False
+                        assert saved["smtp_password"] == ""
+                        assert saved["smtp_password_set"] is True
+                        assert placeholder_password not in json.dumps(saved)
+                        config = saved
                         config["cookie"] = "smoke-test-placeholder"
-                        request = urllib.request.Request(url + "/api/config", data=json.dumps(config).encode(),
-                                                         headers={"Content-Type": "application/json"})
-                        with opener.open(request, timeout=5) as response:
-                            assert json.load(response)["cookie"] == config["cookie"]
+                        saved = post_config(url, config)
+                        assert saved["cookie"] == config["cookie"]
+                        assert saved["smtp_password"] == ""
+                        assert saved["smtp_password_set"] is True
                         config_path = work / "settings/hdu-library-seat/config.json"
-                        assert json.loads(config_path.read_text())["cookie"] == config["cookie"]
+                        persisted = json.loads(config_path.read_text())
+                        assert persisted["cookie"] == config["cookie"]
+                        assert persisted["email"]["password"] == placeholder_password
+                        assert persisted["email"]["enabled"] is False
                         assert config_path.parent.stat().st_mode & 0o777 == 0o700
                     else:
+                        assert config["email_enabled"] is False
+                        assert config["smtp_host"] == "smtp.example.invalid"
+                        assert config["smtp_username"] == "smoke-sender@example.invalid"
+                        assert config["smtp_password_set"] is True
                         assert browser.with_suffix(".url").read_text() == url
+                    # Missing host fails validation before any SMTP connection.
+                    invalid_email = dict(config, smtp_host="", smtp_password="")
+                    request = urllib.request.Request(url + "/api/email/test", data=json.dumps(invalid_email).encode(),
+                                                     headers={"Content-Type": "application/json"})
+                    try:
+                        with opener.open(request, timeout=5):
+                            raise AssertionError("An unconfigured SMTP test unexpectedly succeeded")
+                    except urllib.error.HTTPError as error:
+                        assert error.code == 400
+                        failed = json.load(error)
+                    assert failed["status"] == "failed"
+                    assert failed["message"] == "请填写有效的 SMTP 服务器地址"
+                    assert failed["error"] == failed["message"]
+                    assert failed["at"]
+                    assert placeholder_password not in json.dumps(failed)
                     with opener.open(url + "/api/status", timeout=5) as response:
-                        assert json.load(response)["running"] is False
+                        status = json.load(response)
+                    assert status["running"] is False
+                    assert status["notification"]["status"] == "failed"
+                    assert status["config"]["smtp_password"] == ""
+                    assert status["config"]["smtp_password_set"] is True
+                    assert placeholder_password not in json.dumps(status)
                 finally:
                     process.send_signal(signal.SIGINT)
                     try:
@@ -67,7 +130,7 @@ def main() -> None:
                         process.wait()
                         raise
                 assert process.returncode == 0, log_path.read_text()
-                print(f"PASS installed launch {attempt + 1}: webpage, config, browser dispatch, clean shutdown")
+                print(f"PASS installed launch {attempt + 1}: webpage, config, email API validation and persistence, browser dispatch, clean shutdown")
 
 
 if __name__ == "__main__":

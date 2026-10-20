@@ -1,6 +1,7 @@
 package com.hdu.seathelper;
 
 import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -28,6 +29,7 @@ public final class LoginActivity extends Activity {
     private volatile boolean verifying;
     private boolean destroyed;
 
+    @SuppressLint("SetJavaScriptEnabled") // Official CAS requires JavaScript; no native bridge is exposed here.
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);

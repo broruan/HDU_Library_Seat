@@ -117,7 +117,7 @@ class ServerConfigTests(unittest.TestCase):
         seen = []
 
         class FakeHunter:
-            def __init__(self, settings, on_seats=None):
+            def __init__(self, settings, on_seats=None, should_stop=None):
                 seen.append(list(settings.rule.seat_ids))
 
             def run_once(self, dry_run=False):
@@ -133,6 +133,25 @@ class ServerConfigTests(unittest.TestCase):
 
         self.assertEqual(seen, [["old-seat"], ["new-seat"]])
         self.assertEqual(server.snapshot()["last_result"]["status"], "reserved")
+
+    def test_stop_during_query_prevents_following_reservation(self):
+        server = SeatWebServer("missing-test-config.json")
+        server.settings = dict_to_settings({"cookie": "sid=abc", "poll_interval": 0})
+        server.running = True
+        def seats():
+            server.stop()
+            return [{"id": "A-01", "available": True}]
+        try:
+            with patch("hdu_seat.hunter.ZhishulibClient") as factory:
+                client = factory.return_value
+                client.seats.side_effect = seats
+                server._run_loop(server.settings)
+                client.reserve.assert_not_called()
+                client.seats.assert_called_once()
+            self.assertFalse(server.snapshot()["running"])
+            self.assertEqual(server.snapshot()["last_result"]["status"], "stopped")
+        finally:
+            server.close()
 
 
 class ServerEmailConfigTests(unittest.TestCase):

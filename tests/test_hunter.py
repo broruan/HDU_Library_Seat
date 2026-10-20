@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 from hdu_seat.config import Settings, SpaceCategory
 from hdu_seat.hunter import SeatHunter
@@ -105,6 +106,29 @@ class HunterTests(unittest.TestCase):
         hunter.run()
         self.assertTrue(calls["n"] <= 2)
         self.assertEqual(hunter.history[-1].status, "stopped")
+
+    def test_cancellation_before_query_makes_no_network_calls(self):
+        client = Mock()
+        result = SeatHunter(self._settings(), client, should_stop=lambda: True).run_once()
+        self.assertEqual(result.status, "stopped")
+        client.seats.assert_not_called()
+        client.reserve.assert_not_called()
+
+    def test_cancellation_during_query_never_submits_reservation(self):
+        stop = {"value": False}
+        client = Mock()
+        def seats():
+            stop["value"] = True
+            return [{"id": "A-01", "available": True}]
+        client.seats.side_effect = seats
+        sleeper = Mock()
+        hunter = SeatHunter(self._settings(max_attempts=3), client, sleeper=sleeper,
+                            should_stop=lambda: stop["value"])
+        result = hunter.run()
+        self.assertEqual(result.status, "stopped")
+        client.seats.assert_called_once()
+        client.reserve.assert_not_called()
+        sleeper.assert_not_called()
 
 
 if __name__ == "__main__":

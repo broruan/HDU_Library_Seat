@@ -7,9 +7,9 @@ import android.view.View;
 import android.view.WindowInsets;
 
 final class Ui {
-    static final int PAPER = Color.rgb(246, 244, 238);
-    static final int GREEN = Color.rgb(24, 119, 91);
-    static final int INK = Color.rgb(30, 45, 39);
+    static final int PAPER = Color.rgb(245, 247, 251);
+    static final int GREEN = Color.rgb(37, 99, 235);
+    static final int INK = Color.rgb(32, 45, 66);
 
     private Ui() { }
 

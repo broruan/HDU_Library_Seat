@@ -380,10 +380,10 @@ class SeatWebServer:
                     self._append(_status_attempt("stopped", "已达到最大尝试次数"))
                     break
                 attempt += 1
-                hunter = SeatHunter(current_settings, on_seats=self._update_seats)
+                hunter = SeatHunter(current_settings, on_seats=self._update_seats, should_stop=self.stop_event.is_set)
                 result = hunter.run_once(dry_run=False)
                 self._handle_result(result, current_settings, task_id)
-                if result.status == "reserved":
+                if result.status in {"reserved", "stopped"}:
                     break
                 self.stop_event.wait(current_settings.poll_interval)
         finally:

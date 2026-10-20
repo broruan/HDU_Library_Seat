@@ -4,7 +4,7 @@
 
 ## 安装与登录
 
-1. 从 [GitHub Releases](https://github.com/broruan/HDU_Library_Seat/releases/latest) 下载 `HDU-Library-Seat-Android.apk`。适用于 **Android 7.0 及以上、64 位 ARM 手机**；同一 APK 也包含用于模拟器的 x86_64 版本。
+1. 从 [Android 发布页](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.0) 下载 `HDU-Library-Seat-Android.apk`。适用于 **Android 7.0 及以上、64 位 ARM 手机**；同一 APK 也包含用于模拟器的 x86_64 版本。
 2. 在手机上安装 APK。首次安装时，按系统提示允许当前文件管理器或浏览器安装应用。
 3. 打开“杭电图书馆座位助手”，点击“账号密码登录”。应用会打开学校和图书馆的官方 HTTPS 登录页面，在该页面输入学校账号和密码。若学校要求验证码或二次验证，在官方页面完成即可。
 4. 登录成功后，应用自动接收图书馆会话并返回预约面板。未自动返回时，可在登录页点击“完成登录”；会话失效时重新登录。

@@ -102,6 +102,17 @@ def dump_ui() -> ET.Element:
     return ET.fromstring(adb("shell", "cat", "/sdcard/hdu-smoke.xml").strip())
 
 
+def tap_native_button(text: str):
+    root = dump_ui()
+    for node in root.iter("node"):
+        if node.get("text") == text and node.get("class") == "android.widget.Button":
+            numbers = [int(value) for value in re.findall(r"\d+", node.get("bounds", ""))]
+            if len(numbers) == 4:
+                adb("shell", "input", "tap", str((numbers[0] + numbers[2]) // 2), str((numbers[1] + numbers[3]) // 2))
+                return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug-apk", required=True, type=Path)
@@ -202,7 +213,7 @@ def main():
         wait_for(official_login, seconds=45)
         screenshot(args.out / "official-login.png")
         passed("Account login opens official HTTPS page in isolated WebView without Android bridge")
-        adb("shell", "input", "keyevent", "4")
+        wait_for(lambda: tap_native_button("返回"))
         browser = wait_for(dashboard)
         browser.close()
         passed("Cancelling official login returns to dashboard")

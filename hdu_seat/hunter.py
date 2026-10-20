@@ -41,6 +41,8 @@ class SeatHunter:
         self.history.append(Attempt(datetime.now().isoformat(timespec="seconds"), status, message, seat))
 
     def run_once(self, dry_run: bool = False) -> Attempt:
+        if self.should_stop():
+            return self._stopped()
         try:
             seats = self.client.seats()
             self.on_seats(seats)
@@ -49,6 +51,10 @@ class SeatHunter:
             result = Attempt(datetime.now().isoformat(timespec="seconds"), "error", str(exc))
             self.history.append(result)
             return result
+        # A stop/logout may arrive while the query is in flight. Never submit
+        # a reservation using that response once cancellation was requested.
+        if self.should_stop():
+            return self._stopped()
         if seat is None:
             available = [candidate for candidate in seats if is_available(candidate)]
             requested = {str(value) for value in self.settings.rule.seat_ids}
@@ -84,6 +90,11 @@ class SeatHunter:
         self.history.append(result)
         return result
 
+    def _stopped(self) -> Attempt:
+        result = Attempt(datetime.now().isoformat(timespec="seconds"), "stopped", "手动停止")
+        self.history.append(result)
+        return result
+
     def run(self, dry_run: bool = False, stop_on_success: bool = True) -> Attempt:
         last = Attempt(datetime.now().isoformat(timespec="seconds"), "error", "not started")
         for attempt in range(1, self.settings.max_attempts + 1):
@@ -93,7 +104,7 @@ class SeatHunter:
                 break
             last = self.run_once(dry_run=dry_run)
             log.info("attempt=%s status=%s message=%s", attempt, last.status, last.message)
-            if last.status in {"reserved", "dry-run"} and stop_on_success:
+            if last.status == "stopped" or (last.status in {"reserved", "dry-run"} and stop_on_success):
                 break
             if attempt < self.settings.max_attempts:
                 self.sleeper(self.settings.poll_interval)

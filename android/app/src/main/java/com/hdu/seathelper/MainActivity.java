@@ -1,6 +1,7 @@
 package com.hdu.seathelper;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -73,6 +74,7 @@ public final class MainActivity extends Activity {
         }
     };
 
+    @SuppressLint("SetJavaScriptEnabled") // Only the private bundled dashboard can load in this WebView.
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         root = new FrameLayout(this);

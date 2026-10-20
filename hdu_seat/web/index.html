@@ -220,6 +220,11 @@
   html[data-platform='android'] .account-state::before { transition: background-color 180ms; }
   html[data-platform='android'] .page-footer { padding-bottom: max(100px, calc(84px + env(safe-area-inset-bottom))); }
   @media (max-width: 600px) {
+    html[data-platform='android'] .header-inner { padding: 16px; }
+    html[data-platform='android'] .brand { gap: 9px; }
+    html[data-platform='android'] .brand-mark { width: 34px; height: 34px; }
+    html[data-platform='android'] header h1 { font-size: 16px; }
+    html[data-platform='android'] .status-pill { margin-left: 0; max-width: 100%; }
     html[data-platform='android'] .layout { max-width: 620px; padding-inline: 12px; }
     html[data-platform='android'] .panel-head, html[data-platform='android'] .settings-section, html[data-platform='android'] .email-content { padding-inline: 16px; }
     html[data-platform='android'] .advanced { padding-inline: 0; }
@@ -232,7 +237,7 @@
     html[data-platform='android'] #startBtn, html[data-platform='android'] body[data-running='true'] #stopBtn { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; right: 12px; z-index: 60; min-height: 50px; box-shadow: 0 4px 24px #2563eb30; }
     html[data-platform='android'] body[data-running='true'] #stopBtn { color: white; background: var(--red); box-shadow: 0 4px 24px #c43d4c30; }
     html[data-platform='android'] body[data-running='true'] #startBtn { display: none; }
-    html[data-platform='android'] body[data-keyboard='true'] #startBtn, html[data-platform='android'] body[data-keyboard='true'] #stopBtn { position: static; box-shadow: none; }
+    html[data-platform='android'] body[data-keyboard='true'] #startBtn, html[data-platform='android'] body[data-keyboard='true'] #stopBtn { visibility: hidden; pointer-events: none; }
     html[data-platform='android'] body[data-keyboard='true'] .app-navigation { position: static; }
     html[data-platform='android'] .email-card .panel-head { flex-wrap: wrap; }
     html[data-platform='android'] .email-card .panel-title { flex-wrap: wrap; gap: 8px; }
@@ -456,8 +461,14 @@ async function refreshAndroidSession() {
         : '在学校官方页面输入账号密码，登录后自动返回。');
       $('signInBtn').textContent = androidAuthenticated ? '重新登录' : '账号密码登录';
       $('signOutBtn').hidden = !androidAuthenticated;
+      const emptyCopy = $('seats').querySelector('.empty-copy');
+      if (emptyCopy) emptyCopy.textContent = androidAuthenticated
+        ? '设置使用时段后，点击「查询座位」。'
+        : '登录图书馆账号，设置使用时段，再查询座位。';
     } catch (e) {
+      androidAuthenticated = false;
       $('accountState').textContent = '连接中断';
+      $('accountState').dataset.authenticated = 'false';
       $('accountMessage').textContent = '无法读取登录状态，请返回应用后重试。';
     } finally { androidSessionRequest = null; }
   })();
@@ -875,16 +886,33 @@ async function refreshStatus() {
 loadConfig();
 refreshStatus();
 if (isAndroidApp) {
+  const dryRunButton = document.querySelector('button[onclick="dryRun()"]');
+  dryRunButton.textContent = '试运行';
+  dryRunButton.setAttribute('aria-label', '试运行，不提交预约');
+  dryRunButton.title = '只检查结果，不提交预约';
   const emptyCopy = $('seats').querySelector('.empty-copy');
   if (emptyCopy) emptyCopy.textContent = '登录图书馆账号，设置使用时段，再查询座位。';
   refreshAndroidSession();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAndroidSession(); });
   window.addEventListener('focus', refreshAndroidSession);
-  document.addEventListener('focusin', event => {
-    const input = event.target;
-    document.body.dataset.keyboard = String(input.matches('textarea, input:not([type="checkbox"]):not([type="range"]):not([type="button"])'));
-  });
-  document.addEventListener('focusout', () => { document.body.dataset.keyboard = 'false'; });
+  let fullViewportHeight = innerHeight;
+  let viewportWidth = innerWidth;
+  const syncKeyboard = () => {
+    if (Math.abs(innerWidth - viewportWidth) > 80) {
+      viewportWidth = innerWidth;
+      fullViewportHeight = innerHeight;
+    }
+    fullViewportHeight = Math.max(fullViewportHeight, innerHeight);
+    const editing = document.activeElement?.matches('textarea, input:not([type="checkbox"]):not([type="range"]):not([type="button"])');
+    // Android resizes the WebView when the keyboard opens. Keep the action in
+    // the same position and reveal it again when Back dismisses the keyboard.
+    const visibleHeight = window.visualViewport?.height || innerHeight;
+    document.body.dataset.keyboard = String(Boolean(editing) && fullViewportHeight - visibleHeight > 150);
+  };
+  document.addEventListener('focusin', syncKeyboard);
+  document.addEventListener('focusout', syncKeyboard);
+  window.addEventListener('resize', syncKeyboard);
+  window.visualViewport?.addEventListener('resize', syncKeyboard);
   setInterval(refreshAndroidSession, 15000);
 }
 ['date', 'start_time'].forEach(id => $(id).addEventListener('input', updateTimePreview));

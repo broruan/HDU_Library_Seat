@@ -62,6 +62,9 @@ chaquopy {
     }
 }
 tasks.configureEach {
-    if (name.startsWith('generate') && name.endsWith('PythonAssets')) dependsOn sharedPython
+    if ((name.startsWith('generate') && name.endsWith('PythonAssets'))
+            || (name.startsWith('merge') && name.endsWith('PythonSources'))) {
+        dependsOn sharedPython
+    }
 }
 tasks.named('preBuild').configure { dependsOn sharedPython }

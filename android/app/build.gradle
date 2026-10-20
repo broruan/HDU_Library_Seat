@@ -1,0 +1,67 @@
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python'
+}
+
+def signingPath = System.getenv('HDU_ANDROID_KEYSTORE_PATH')
+def signingPassword = System.getenv('HDU_ANDROID_KEYSTORE_PASSWORD')
+def signingAlias = System.getenv('HDU_ANDROID_KEY_ALIAS')
+def signingKeyPassword = System.getenv('HDU_ANDROID_KEY_PASSWORD')
+def hasReleaseKey = [signingPath, signingPassword, signingAlias, signingKeyPassword].every { it }
+
+android {
+    namespace 'com.hdu.seathelper'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.hdu.seathelper'
+        minSdk 24
+        targetSdk 35
+        versionCode 12
+        versionName '1.2.0'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+    }
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile file(signingPath)
+                storePassword signingPassword
+                keyAlias signingAlias
+                keyPassword signingKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (hasReleaseKey) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+}
+
+// Copy only the shared package. Never bundle local config, artifacts or credentials.
+def sharedPython = tasks.register('syncSharedPython', Sync) {
+    from('../../hdu_seat') { into 'hdu_seat' }
+    exclude '**/__pycache__/**', '**/*.pyc'
+    into layout.buildDirectory.dir('generated/python')
+}
+chaquopy {
+    defaultConfig {
+        version = '3.13'
+        def pythonCommand = System.getenv('HDU_ANDROID_BUILD_PYTHON')
+        if (pythonCommand) buildPython(pythonCommand)
+        extractPackages('hdu_seat')
+    }
+    sourceSets {
+        main { srcDir layout.buildDirectory.dir('generated/python') }
+    }
+}
+tasks.configureEach {
+    if (name.startsWith('generate') && name.endsWith('PythonAssets')) dependsOn sharedPython
+}
+tasks.named('preBuild').configure { dependsOn sharedPython }

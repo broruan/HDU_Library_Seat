@@ -2,9 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5f7fb">
 <title>杭电图书馆座位助手</title>
+<script>
+  // Set this before the first paint: Android never displays the Cookie field.
+  const isAndroidApp = new URLSearchParams(location.search).get('platform') === 'android' || Boolean(window.HduAndroid);
+  if (isAndroidApp) document.documentElement.dataset.platform = 'android';
+</script>
 <style>
   :root {
     --bg: #f5f7fb;
@@ -185,6 +190,54 @@
   .btn[aria-busy='true']::before { content: ''; width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 700ms linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .btn[aria-busy='true'] { cursor: progress; }
+  [hidden] { display: none !important; }
+  .android-only { display: none; }
+  html[data-platform='android'] .android-only { display: block; }
+  html[data-platform='android'] .cookie-section { display: none; }
+  html[data-platform='android'] { scroll-padding-top: 70px; }
+  .account-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .account-heading h3 { margin: 0; }
+  .account-state { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; }
+  .account-state::before { content: ''; width: 7px; height: 7px; background: #8895a8; border-radius: 50%; }
+  .account-state[data-authenticated='true'] { color: var(--green); }
+  .account-state[data-authenticated='true']::before { background: var(--green); }
+  .account-copy { margin: 9px 0 12px; color: var(--muted); font-size: 13px; }
+  .account-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .account-actions .btn { min-height: 44px; }
+  html[data-platform='android'] .app-navigation { position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; padding: 8px 14px; margin: 0 auto 14px; max-width: 620px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .app-navigation button { flex: 1; min-width: 0; min-height: 44px; padding: 8px 4px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--muted); font-size: 14px; font-weight: 600; transition: background-color 180ms, color 180ms, transform 100ms var(--ease); }
+  .app-navigation button:active { transform: scale(.97); }
+  .app-navigation button[aria-current='location'] { color: var(--primary-dark); background: #e7efff; border-color: #d9e5ff; }
+  html[data-platform='android'] .field input, html[data-platform='android'] .field select { min-height: 44px; font-size: 16px; }
+  html[data-platform='android'] .check-label { min-height: 44px; }
+  html[data-platform='android'] .check-label input { width: 20px; height: 20px; }
+  html[data-platform='android'] .advanced summary, html[data-platform='android'] .email-details summary { min-height: 48px; }
+  html[data-platform='android'] .btn-save { min-height: 44px; }
+  html[data-platform='android'] body:not([data-running='true']) #stopBtn { display: none; }
+  html[data-platform='android'] .text-button { min-height: 44px; }
+  html[data-platform='android'] .account-section { animation: enter 260ms var(--ease) both; }
+  html[data-platform='android'] .account-state { transition: color 180ms; }
+  html[data-platform='android'] .account-state::before { transition: background-color 180ms; }
+  html[data-platform='android'] .page-footer { padding-bottom: max(100px, calc(84px + env(safe-area-inset-bottom))); }
+  @media (max-width: 600px) {
+    html[data-platform='android'] .layout { max-width: 620px; padding-inline: 12px; }
+    html[data-platform='android'] .panel-head, html[data-platform='android'] .settings-section, html[data-platform='android'] .email-content { padding-inline: 16px; }
+    html[data-platform='android'] .advanced { padding-inline: 0; }
+    html[data-platform='android'] .advanced summary, html[data-platform='android'] .advanced-fields, html[data-platform='android'] .actions, html[data-platform='android'] .seats-content, html[data-platform='android'] .seat-legend, html[data-platform='android'] .log { padding-inline: 16px; }
+    html[data-platform='android'] .row:not(.smtp-row) { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    html[data-platform='android'] .email-form .row:not(.smtp-row) { gap: 14px; }
+    html[data-platform='android'] .task-overview { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    html[data-platform='android'] .seats-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    html[data-platform='android'] .btn { min-height: 44px; }
+    html[data-platform='android'] #startBtn, html[data-platform='android'] body[data-running='true'] #stopBtn { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; right: 12px; z-index: 60; min-height: 50px; box-shadow: 0 4px 24px #2563eb30; }
+    html[data-platform='android'] body[data-running='true'] #stopBtn { color: white; background: var(--red); box-shadow: 0 4px 24px #c43d4c30; }
+    html[data-platform='android'] body[data-running='true'] #startBtn { display: none; }
+    html[data-platform='android'] body[data-keyboard='true'] #startBtn, html[data-platform='android'] body[data-keyboard='true'] #stopBtn { position: static; box-shadow: none; }
+    html[data-platform='android'] body[data-keyboard='true'] .app-navigation { position: static; }
+    html[data-platform='android'] .email-card .panel-head { flex-wrap: wrap; }
+    html[data-platform='android'] .email-card .panel-title { flex-wrap: wrap; gap: 8px; }
+    html[data-platform='android'] .account-actions .btn { flex: 1 1 auto; }
+  }
   .actions { border-bottom: 1px solid var(--border); background: #f8faff; }
   @media (max-width: 1050px) { .email-content, .task-overview { padding-inline: 20px; } .smtp-row { grid-template-columns: minmax(0, 1fr) minmax(80px, .7fr); } .smtp-host { grid-column: 1 / -1; } }
   @media (max-width: 480px) { .email-content, .task-overview { padding-inline: 18px; } .task-overview { gap: 14px; } .overview-value { font-size: 14px; } .email-form .row:not(.smtp-row) { grid-template-columns: minmax(0, 1fr); gap: 14px; } .email-actions .btn { flex: 1; } #startBtn { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 14px; right: 14px; z-index: 60; min-height: 48px; box-shadow: 0 4px 24px #2563eb30; } body[data-running='true'] #startBtn { display: none; } body[data-running='true'] #stopBtn { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 14px; right: 14px; z-index: 60; min-height: 48px; background: var(--red); color: white; box-shadow: 0 4px 24px #c43d4c30; } .page-footer { padding-bottom: 90px; } body { scroll-padding-bottom: 90px; } }
@@ -243,10 +296,22 @@
 </header>
 
 <div class="workspace-note"><div class="default-message">选择可预约座位，目标会自动保存。</div><span class="timezone">北京时间 · UTC+8</span><div class="toast" id="toast" role="status" aria-live="polite"></div></div>
+<nav class="app-navigation android-only" aria-label="应用导航">
+  <button type="button" onclick="navigateApp('settings')" data-section="settings" aria-current="location">预约设置</button>
+  <button type="button" onclick="navigateApp('seats')" data-section="seats">座位</button>
+  <button type="button" onclick="navigateApp('email')" data-section="email">邮件</button>
+  <button type="button" onclick="navigateApp('logs')" data-section="logs">日志</button>
+</nav>
 
 <main class="layout">
-  <section class="card config-card" aria-labelledby="configHeading">
+  <section class="card config-card" id="settingsPanel" aria-labelledby="configHeading">
     <div class="panel-head"><h2 id="configHeading">预约设置</h2><button class="btn btn-save" type="button" onclick="saveConfig()"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8"/></svg>保存配置</button></div>
+
+    <div class="settings-section android-only account-section">
+      <div class="account-heading"><h3>图书馆账号</h3><span class="account-state" id="accountState" data-authenticated="false" role="status">正在检查…</span></div>
+      <p class="account-copy" id="accountMessage">在学校官方页面输入账号密码，登录后自动返回。</p>
+      <div class="account-actions"><button class="btn btn-query" id="signInBtn" type="button" onclick="signInAndroid()">账号密码登录</button><button class="btn btn-ghost" id="signOutBtn" type="button" onclick="signOutAndroid()" hidden>退出登录</button></div>
+    </div>
 
     <div class="actions">
       <button class="btn btn-primary full" id="startBtn" type="button" onclick="start()">开始 / 定时抢座<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
@@ -255,7 +320,7 @@
       <button class="btn btn-red full" id="stopBtn" type="button" onclick="stop()" disabled>停止任务</button>
     </div>
 
-    <div class="settings-section">
+    <div class="settings-section cookie-section">
       <div class="field"><label for="cookie">登录 Cookie</label><textarea id="cookie" placeholder="粘贴浏览器登录后的完整 Cookie" spellcheck="false" autocomplete="off"></textarea></div>
     </div>
 
@@ -308,13 +373,13 @@
       <div><span class="overview-label">使用时段</span><span class="overview-value" id="bookingSummary">今天 · 立即开始 · 4 小时</span></div>
       <div><span class="overview-label">目标座位</span><span class="overview-value" id="selectionSummary">不限座位</span></div>
     </div>
-    <section class="card seats-card" aria-labelledby="seatsHeading">
+    <section class="card seats-card" id="seatsPanel" aria-labelledby="seatsHeading">
       <div class="panel-head"><div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8M5 12v6h14v-6M7 18v3m10-3v3M9 8h6"/></svg><h2 id="seatsHeading">可预约座位</h2></div><button class="btn btn-query" type="button" onclick="querySeats()"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>查询座位</button></div>
       <div class="seats-content" id="seats"><div class="empty-note"><div class="empty-title">还没有查询座位</div><div class="empty-copy">填写 Cookie 和使用时段，再点击「查询座位」。</div></div></div>
       <div class="seat-legend" aria-label="座位状态说明"><span class="legend-item"><i class="legend-mark available" aria-hidden="true"></i>可预约</span><span class="legend-item"><i class="legend-mark selected" aria-hidden="true"></i>已选择</span><span class="legend-item"><i class="legend-mark" aria-hidden="true"></i>不可预约</span></div>
     </section>
 
-    <section class="card email-card" aria-labelledby="emailHeading">
+    <section class="card email-card" id="emailPanel" aria-labelledby="emailHeading">
       <div class="panel-head">
         <div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><h2 id="emailHeading">邮件通知</h2><span class="email-dirty" id="emailDirty" hidden>未保存</span></div>
         <label class="toggle" for="email_enabled"><input id="email_enabled" type="checkbox" role="switch" aria-label="启用预约成功邮件通知"><span id="emailToggleLabel">未启用</span></label>
@@ -345,7 +410,7 @@
       </div>
     </section>
 
-    <section class="card log-card" aria-labelledby="logHeading">
+    <section class="card log-card" id="logsPanel" aria-labelledby="logHeading">
       <div class="panel-head"><div class="panel-title"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l3 3v15H5V3h3Zm1 5h6m-6 4h6m-6 4h4"/></svg><h2 id="logHeading">运行日志</h2></div></div>
       <div class="log" id="log"><div class="empty-note">暂无运行记录</div></div>
     </section>
@@ -363,6 +428,67 @@ let clearSmtpPassword = false;
 let emailTestBusy = false;
 let startBusy = false;
 let emailConfigDirty = false;
+let androidAuthenticated = false;
+let androidSessionRequest = null;
+
+function navigateApp(section) {
+  const panel = $(`${section}Panel`);
+  if (!panel) return;
+  document.querySelectorAll('.app-navigation button').forEach(button => {
+    if (button.dataset.section === section) button.setAttribute('aria-current', 'location');
+    else button.removeAttribute('aria-current');
+  });
+  document.activeElement?.blur();
+  panel.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+}
+
+async function refreshAndroidSession() {
+  if (!isAndroidApp) return;
+  if (androidSessionRequest) return androidSessionRequest;
+  androidSessionRequest = (async () => {
+    try {
+      const session = await api('GET', '/api/android/session');
+      androidAuthenticated = Boolean(session.authenticated);
+      $('accountState').textContent = androidAuthenticated ? '已登录' : '未登录';
+      $('accountState').dataset.authenticated = String(androidAuthenticated);
+      $('accountMessage').textContent = session.message || (androidAuthenticated
+        ? '登录已就绪，可以查询座位和启动预约。'
+        : '在学校官方页面输入账号密码，登录后自动返回。');
+      $('signInBtn').textContent = androidAuthenticated ? '重新登录' : '账号密码登录';
+      $('signOutBtn').hidden = !androidAuthenticated;
+    } catch (e) {
+      $('accountState').textContent = '连接中断';
+      $('accountMessage').textContent = '无法读取登录状态，请返回应用后重试。';
+    } finally { androidSessionRequest = null; }
+  })();
+  return androidSessionRequest;
+}
+
+function signInAndroid() {
+  if (!window.HduAndroid?.signIn) { showToast('请在安卓应用中打开登录', 'error'); return; }
+  try { window.HduAndroid.signIn(); }
+  catch (e) { showToast('暂时无法打开登录页面，请重试', 'error'); }
+}
+
+function signOutAndroid() {
+  if (!window.HduAndroid?.signOut) return;
+  try { window.HduAndroid.signOut(); }
+  catch (e) { showToast('退出登录失败，请重试', 'error'); }
+}
+
+async function requireAndroidSession() {
+  if (!isAndroidApp) return true;
+  await refreshAndroidSession();
+  if (androidAuthenticated) return true;
+  navigateApp('settings');
+  showToast('请先使用图书馆账号登录', 'error');
+  return false;
+}
+
+window.hduAndroidSessionChanged = () => {
+  refreshAndroidSession();
+  refreshStatus();
+};
 
 function updateOverview() {
   const date = $('date').value || '今天';
@@ -497,7 +623,7 @@ function collectConfig() {
   const floor = $('preferred_floor') ? $('preferred_floor').value : '';
   return {
     base_url: 'https://hdu.huitu.zhishulib.com',
-    cookie: $('cookie').value.trim(),
+    ...(isAndroidApp ? {} : { cookie: $('cookie').value.trim() }),
     category_id: $('category_id').value,
     content_id: $('content_id').value,
     date: $('date').value || null,
@@ -530,7 +656,9 @@ async function api(method, path, body) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
-  const res = await fetch(path, opts);
+  // Android's random secret path authenticates the local server requests.
+  const url = isAndroidApp ? new URL(path.replace(/^\//, ''), document.baseURI) : path;
+  const res = await fetch(url, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
   return data;
@@ -543,7 +671,7 @@ function fillForm(cfg) {
   $('schedule_at').min = beijingNow.slice(0, 16);
   const savedDateExpired = cfg.date && cfg.date < beijingToday;
   const savedSchedule = String(cfg.schedule_at || '').replace(' ', 'T').slice(0, 19);
-  $('cookie').value = cfg.cookie || '';
+  $('cookie').value = isAndroidApp ? '' : (cfg.cookie || '');
   $('category_id').value = cfg.category_id ?? 591;
   $('content_id').value = cfg.content_id ?? 3;
   // Do not let a stale persisted booking date make every future query fail.
@@ -677,11 +805,13 @@ async function saveConfig() {
 }
 
 async function querySeats() {
+  if (!await requireAndroidSession()) return;
   const buttons = [...document.querySelectorAll('button[onclick="querySeats()"]')];
   buttons.forEach(button => setBusy(button, true, '查询中…'));
   try {
     const data = await api('POST', '/api/seats', collectConfig());
     renderSeats(data.seats || []);
+    if (isAndroidApp) navigateApp('seats');
     showToast('已查询', 'ok');
   } catch (e) {
     $('seats').innerHTML = '<div class="empty-note">查询未完成，请检查配置后重试。</div>';
@@ -691,6 +821,7 @@ async function querySeats() {
 }
 
 async function dryRun() {
+  if (!await requireAndroidSession()) return;
   try {
     const data = await api('POST', '/api/run', { config: collectConfig(), dry_run: true });
     showToast(STATUS_TEXT[data.status] || data.status, data.status === 'dry-run' ? 'ok' : 'error');
@@ -699,6 +830,7 @@ async function dryRun() {
 }
 
 async function start() {
+  if (!await requireAndroidSession()) return;
   startBusy = true;
   setBusy($('startBtn'), true, '正在启动…');
   try {
@@ -742,6 +874,19 @@ async function refreshStatus() {
 
 loadConfig();
 refreshStatus();
+if (isAndroidApp) {
+  const emptyCopy = $('seats').querySelector('.empty-copy');
+  if (emptyCopy) emptyCopy.textContent = '登录图书馆账号，设置使用时段，再查询座位。';
+  refreshAndroidSession();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAndroidSession(); });
+  window.addEventListener('focus', refreshAndroidSession);
+  document.addEventListener('focusin', event => {
+    const input = event.target;
+    document.body.dataset.keyboard = String(input.matches('textarea, input:not([type="checkbox"]):not([type="range"]):not([type="button"])'));
+  });
+  document.addEventListener('focusout', () => { document.body.dataset.keyboard = 'false'; });
+  setInterval(refreshAndroidSession, 15000);
+}
 ['date', 'start_time'].forEach(id => $(id).addEventListener('input', updateTimePreview));
 $('schedule_at').addEventListener('input', updateSchedulePreview);
 ['date', 'start_time', 'duration_hours', 'seat_ids', 'schedule_at'].forEach(id => $(id).addEventListener('input', updateOverview));

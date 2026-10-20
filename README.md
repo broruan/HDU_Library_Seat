@@ -2,9 +2,9 @@
 
 [中文](#中文) · [English](#english)
 
-一个面向杭州电子科技大学图书馆汇图/知书平台的本地座位预约工具。项目只使用 Python 标准库，提供 Web 可视化面板和命令行界面。
+一个面向杭州电子科技大学图书馆汇图/知书平台的本地座位预约工具。核心只使用 Python 标准库，提供 Android 应用、Web 可视化面板和命令行界面。
 
-A local seat reservation helper for Hangzhou Dianzi University Library's Huitu/Zhishulib platform. It uses only the Python standard library and provides both a web dashboard and a command-line interface.
+A local seat reservation helper for Hangzhou Dianzi University Library's Huitu/Zhishulib platform. Its shared engine uses only the Python standard library and provides an Android app, a web dashboard and a command-line interface.
 
 > [!IMPORTANT]
 > 本项目不是学校或图书馆的官方服务。请遵守图书馆规则，合理设置轮询间隔，并妥善保管登录 Cookie。
@@ -12,6 +12,16 @@ A local seat reservation helper for Hangzhou Dianzi University Library's Huitu/Z
 > This is not an official university or library service. Follow library policies, use a reasonable polling interval, and keep your login cookie private.
 
 ## 中文
+
+### Android 手机应用
+
+从 [Android 下载页](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.0) 下载 `HDU-Library-Seat-Android.apk`。支持 **Android 7.0 及以上的 64 位设备**（arm64-v8a / x86_64），首次安装按系统提示允许安装此来源的应用。
+
+打开应用，点击“账号登录”，在应用内的**学校官方统一身份认证页面**输入账号和密码；登录完成后自动返回预约面板，**无需复制或填写 Cookie，也无需运行电脑端**。验证码等认证步骤仍在官方页面完成，应用不保存学校密码。
+
+安卓端与网页端共用预约引擎，提供查询选座、偏好筛选、立即预约、试运行、北京时间定时启动、轮询停止及 SMTP 邮件通知。手机界面采用单列设置、快捷导航和固定任务操作区。运行时保留常驻通知；长时间定时任务请允许后台运行，系统强行停止应用或重启手机后需要重新启动任务。
+
+查看 [Android 使用、构建和验证说明](docs/android.md)。Android 发布单独编号，不改变 Windows / Ubuntu 的最新版本下载。
 
 ### Windows 免安装版
 
@@ -194,6 +204,12 @@ pyproject.toml         打包与项目元数据
 欢迎提交 Issue 或 Pull Request。请勿在测试、日志、截图或提交记录中包含真实 Cookie、学号、用户 ID 或预约响应数据；新增功能时请同时补充测试。
 
 ## English
+
+### Android app
+
+Download `HDU-Library-Seat-Android.apk` from the [Android release](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.0). Requires Android 7.0+ and a 64-bit arm64-v8a or x86_64 device. Tap the account sign-in button and enter your credentials on the university's official sign-in page inside the app. The session is connected automatically; no manual cookie or desktop server is needed. The app does not store your university password.
+
+The app shares the Web booking engine, including seat selection, filters, booking windows, dry runs, Beijing-time scheduling, polling, stopping, and SMTP email. Keep the foreground notification and allow background execution for scheduled tasks; force-stopping the app or restarting the phone interrupts tasks. See the [Android guide](docs/android.md) for build instructions and verification limits.
 
 ### Standalone Windows release
 

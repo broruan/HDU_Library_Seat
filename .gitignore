@@ -48,3 +48,11 @@ Desktop.ini
 /_submit.txt
 /app.es6.min.js
 /tmp*/
+
+# Android local SDK, Gradle state and signing credentials
+.gradle/
+/android/local.properties
+/android/.toolchain/
+/android/.signing/
+*.jks
+*.keystore

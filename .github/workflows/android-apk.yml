@@ -1,0 +1,101 @@
+name: Build and test Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, 'codex/**']
+    paths:
+      - 'android/**'
+      - 'hdu_seat/**'
+      - 'tests/**'
+      - 'packaging/smoke_android.py'
+      - 'build-android.ps1'
+      - '.github/workflows/android-apk.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'hdu_seat/**'
+      - 'tests/**'
+      - 'packaging/smoke_android.py'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install Android build platform
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Test shared Python backend
+        run: python -m unittest discover -v
+      - name: Build APKs
+        env:
+          HDU_ANDROID_KEYSTORE_BASE64: ${{ secrets.HDU_ANDROID_KEYSTORE_BASE64 }}
+          HDU_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.HDU_ANDROID_KEYSTORE_PASSWORD }}
+          HDU_ANDROID_KEY_ALIAS: ${{ secrets.HDU_ANDROID_KEY_ALIAS }}
+          HDU_ANDROID_KEY_PASSWORD: ${{ secrets.HDU_ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x android/gradlew
+          mkdir -p dist/android
+          cd android
+          ./gradlew --no-daemon assembleDebug lintDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../dist/android/HDU-Library-Seat-Android-debug.apk
+          if [ -n "$HDU_ANDROID_KEYSTORE_BASE64" ]; then
+            export HDU_ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/hdu-android-release.jks"
+            python -c 'import base64,os,pathlib; pathlib.Path(os.environ["HDU_ANDROID_KEYSTORE_PATH"]).write_bytes(base64.b64decode(os.environ["HDU_ANDROID_KEYSTORE_BASE64"], validate=True))'
+            ./gradlew --no-daemon assembleRelease
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+            cp app/build/outputs/apk/release/app-release.apk ../dist/android/HDU-Library-Seat-Android.apk
+            rm "$HDU_ANDROID_KEYSTORE_PATH"
+          fi
+          cd ../dist/android
+          sha256sum *.apk > SHA256SUMS.txt
+      - name: Prepare emulator tests
+        run: |
+          python -m pip install websocket-client==1.8.0
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and exercise APK on Android 15
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python packaging/smoke_android.py --debug-apk dist/android/HDU-Library-Seat-Android-debug.apk --release-apk dist/android/HDU-Library-Seat-Android.apk --out artifacts/android-smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-apk
+          path: dist/android/*
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-verification
+          path: |
+            artifacts/android-smoke/
+            android/app/build/reports/lint-results-debug.html
+          if-no-files-found: warn
+          retention-days: 30

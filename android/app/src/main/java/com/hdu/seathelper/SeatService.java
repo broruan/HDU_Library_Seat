@@ -1,11 +1,13 @@
 package com.hdu.seathelper;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Binder;
 import android.os.Build;
@@ -103,7 +105,8 @@ public final class SeatService extends Service {
 
     private void updateNotification(String message) {
         main.post(() -> {
-            if (!destroyed && !message.equals(previousMessage)) {
+            if (!destroyed && !message.equals(previousMessage)
+                    && (Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)) {
                 previousMessage = message;
                 getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, notification(message));
             }
@@ -135,7 +138,10 @@ public final class SeatService extends Service {
                             .setContentText("打开应用查看座位和使用时段")
                             .setContentIntent(openIntent()).setAutoCancel(true).build();
                     main.post(() -> {
-                        if (!destroyed) getSystemService(NotificationManager.class).notify(2, resultNotification);
+                        if (!destroyed && (Build.VERSION.SDK_INT < 33
+                                || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)) {
+                            getSystemService(NotificationManager.class).notify(2, resultNotification);
+                        }
                     });
                 }
             }

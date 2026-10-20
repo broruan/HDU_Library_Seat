@@ -211,8 +211,17 @@ def main():
             return False
 
         wait_for(official_login, seconds=45)
+
+        def login_ui_ready():
+            root = dump_ui()
+            text = ' '.join(node.get('text', '') for node in root.iter('node'))
+            return '学校账号登录' in text and '返回' in text and ('完成登录' in text or '重新加载' in text)
+
+        # A DevTools target can exist before Android draws the new activity.
+        # Require the actual native toolbar before recording login evidence.
+        wait_for(login_ui_ready)
         screenshot(args.out / "official-login.png")
-        passed("Account login opens official HTTPS page in isolated WebView without Android bridge")
+        passed("Account login displays native login toolbar and official HTTPS WebView without Android bridge")
         wait_for(lambda: tap_native_button("返回"))
         browser = wait_for(dashboard)
         browser.close()

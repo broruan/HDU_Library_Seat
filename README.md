@@ -15,7 +15,7 @@ A local seat reservation helper for Hangzhou Dianzi University Library's Huitu/Z
 
 ### Android 手机应用
 
-从 [Android 下载页](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.0) 下载 `HDU-Library-Seat-Android.apk`。支持 **Android 7.0 及以上的 64 位设备**（arm64-v8a / x86_64），首次安装按系统提示允许安装此来源的应用。
+从 [Android 下载页](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.1) 下载 `HDU-Library-Seat-Android.apk`。支持 **Android 7.0 及以上的 64 位设备**（arm64-v8a / x86_64），首次安装按系统提示允许安装此来源的应用。
 
 打开应用，点击“账号登录”，在应用内的**学校官方统一身份认证页面**输入账号和密码；登录完成后自动返回预约面板，**无需复制或填写 Cookie，也无需运行电脑端**。验证码等认证步骤仍在官方页面完成，应用不保存学校密码。
 
@@ -207,7 +207,7 @@ pyproject.toml         打包与项目元数据
 
 ### Android app
 
-Download `HDU-Library-Seat-Android.apk` from the [Android release](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.0). Requires Android 7.0+ and a 64-bit arm64-v8a or x86_64 device. Tap the account sign-in button and enter your credentials on the university's official sign-in page inside the app. The session is connected automatically; no manual cookie or desktop server is needed. The app does not store your university password.
+Download `HDU-Library-Seat-Android.apk` from the [Android release](https://github.com/broruan/HDU_Library_Seat/releases/tag/android-v1.2.1). Requires Android 7.0+ and a 64-bit arm64-v8a or x86_64 device. Tap the account sign-in button and enter your credentials on the university's official sign-in page inside the app. The session is connected automatically; no manual cookie or desktop server is needed. The app does not store your university password.
 
 The app shares the Web booking engine, including seat selection, filters, booking windows, dry runs, Beijing-time scheduling, polling, stopping, and SMTP email. Keep the foreground notification and allow background execution for scheduled tasks; force-stopping the app or restarting the phone interrupts tasks. See the [Android guide](docs/android.md) for build instructions and verification limits.
 

@@ -41,31 +41,31 @@ class AndroidRuntimeTests(unittest.TestCase):
             return json.loads(raw) if "application/json" in response.headers["Content-Type"] else raw
 
     def login(self):
-        with patch.object(runtime.ZhishulibClient, "search", return_value={"userInfo": {"id": "test-only"}}):
+        with patch.object(runtime, "verify_library_session", return_value={"authenticated": True, "status": "authenticated", "message": "ok"}):
             self.assertTrue(self.app.set_session("sid=private-session"))
 
     def test_anonymous_cookie_cannot_become_authenticated(self):
-        with patch.object(runtime.ZhishulibClient, "search", side_effect=HDUClientError("未登录")):
+        with patch.object(runtime, "verify_library_session", return_value={"authenticated": False, "status": "login_required", "message": "请登录"}):
             self.assertFalse(self.app.set_session("sid=anonymous"))
         self.assertFalse(self.request("api/android/session")["authenticated"])
         self.assertFalse(self.path.exists())
 
     def test_empty_api_response_is_not_proof_of_login(self):
-        with patch.object(runtime.ZhishulibClient, "search", return_value={}):
+        with patch.object(runtime, "verify_library_session", return_value={"authenticated": False, "status": "upstream_error", "message": "响应异常"}):
             self.assertFalse(self.app.set_session("sid=anonymous"))
         self.assertFalse(self.app.session()["authenticated"])
 
-    def test_login_uses_current_time_instead_of_an_expired_booking(self):
+    def test_login_preserves_expired_booking_preferences(self):
         self.app.settings.booking.date = "2000-01-01"
         self.app.settings.booking.start_time = "08:00"
         seen = []
-        def search(client):
-            seen.append(client.settings.booking)
-            return {"userInfo": {"id": "test-only"}}
-        with patch.object(runtime.ZhishulibClient, "search", search):
+        def verify(settings):
+            seen.append(settings.booking)
+            return {"authenticated": True, "status": "authenticated", "message": "ok"}
+        with patch.object(runtime, "verify_library_session", verify):
             self.assertTrue(self.app.set_session("sid=test-only"))
-        self.assertIsNone(seen[0].date)
-        self.assertIsNone(seen[0].start_time)
+        self.assertEqual(seen[0].date, "2000-01-01")
+        self.assertEqual(seen[0].start_time, "08:00")
         self.assertEqual(self.app.settings.booking.date, "2000-01-01")
 
     def test_verified_session_is_persisted_and_never_returned_to_webview(self):

@@ -13,8 +13,9 @@ import threading
 from typing import Any
 from urllib.parse import urlsplit
 
-from .client import HDUClientError, ZhishulibClient
-from .config import Booking, Settings
+from .android_auth import verify_library_session
+from .client import HDUClientError
+from .config import Settings
 from .server import DEFAULT_BASE_URL, SeatWebServer, create_http_server
 
 
@@ -31,10 +32,12 @@ class AndroidSeatWebServer(SeatWebServer):
     def _settings_for(self, flat: dict[str, Any], *, validate_email: bool = True) -> Settings:
         with self.lock:
             cookie = self.settings.cookie
-        return super()._settings_for(
+            user_agent = self.settings.user_agent
+        settings = super()._settings_for(
             {**flat, "base_url": DEFAULT_BASE_URL, "cookie": cookie},
             validate_email=validate_email,
         )
+        return replace(settings, user_agent=user_agent)
 
     def use_config(self, flat: dict[str, Any], *, validate_email: bool = True) -> Settings:
         settings = self._settings_for(flat, validate_email=validate_email)
@@ -60,29 +63,36 @@ class AndroidSeatWebServer(SeatWebServer):
             "message": "已连接图书馆账号，会话失效后请重新登录" if authenticated else "使用学校账号密码登录",
         }
 
-    def set_session(self, cookie: str) -> bool:
-        with self.session_lock:
-            return self._set_session(cookie)
+    def set_session(self, cookie: str, user_agent: str = "") -> bool:
+        return self.verify_session(cookie, user_agent)["authenticated"]
 
-    def _set_session(self, cookie: str) -> bool:
+    def verify_session(self, cookie: str, user_agent: str = "") -> dict[str, Any]:
+        with self.session_lock:
+            return self._verify_session(cookie, user_agent)
+
+    def _verify_session(self, cookie: str, user_agent: str) -> dict[str, Any]:
         if not isinstance(cookie, str) or not cookie.strip() or any(c in cookie for c in "\r\n"):
-            return False
+            return {"authenticated": False, "status": "login_required", "message": "请先完成学校账号登录"}
+        if not isinstance(user_agent, str) or any(c in user_agent for c in "\r\n"):
+            return {"authenticated": False, "status": "upstream_error", "message": "登录浏览器信息无效，请重新打开登录页面"}
         with self.lock:
-            settings = replace(self.settings, cookie=cookie.strip(), base_url=DEFAULT_BASE_URL, booking=Booking())
-        # An anonymous PHP session is not proof of authentication. A real read
-        # request must succeed; this never locks or books a seat.
+            settings = replace(self.settings, cookie=cookie.strip(), base_url=DEFAULT_BASE_URL,
+                               user_agent=user_agent or self.settings.user_agent)
         try:
-            response = ZhishulibClient(settings).search()
+            result = verify_library_session(settings)
         except Exception:
-            return False
-        user = response.get("userInfo")
-        if not isinstance(user, dict) or not user.get("id"):
-            return False
-        with self.lock:
-            settings = replace(self.settings, cookie=cookie.strip(), base_url=DEFAULT_BASE_URL)
-            self._persist(settings)
-            self.settings = settings
-        return True
+            return {"authenticated": False, "status": "upstream_error", "message": "登录验证发生异常，请重试"}
+        if not result["authenticated"]:
+            return result
+        try:
+            with self.lock:
+                settings = replace(self.settings, cookie=cookie.strip(), base_url=DEFAULT_BASE_URL,
+                                   user_agent=settings.user_agent)
+                self._persist(settings)
+                self.settings = settings
+        except HDUClientError:
+            return {"authenticated": False, "status": "save_error", "message": "登录信息保存失败，请检查存储空间后重试"}
+        return result
 
     def clear_session(self) -> None:
         with self.session_lock:
@@ -185,9 +195,16 @@ def start(config_path: str) -> str:
         return url
 
 
-def set_session(cookie: str) -> bool:
+def set_session(cookie: str, user_agent: str = "") -> bool:
     with _lifecycle:
-        return _app.set_session(cookie) if _app is not None else False
+        return _app.set_session(cookie, user_agent) if _app is not None else False
+
+
+def verify_session_json(cookie: str, user_agent: str = "") -> str:
+    with _lifecycle:
+        result = _app.verify_session(cookie, user_agent) if _app is not None else {
+            "authenticated": False, "status": "upstream_error", "message": "本地服务尚未启动，请返回应用后重试"}
+        return json.dumps(result, ensure_ascii=False)
 
 
 def clear_session() -> None:

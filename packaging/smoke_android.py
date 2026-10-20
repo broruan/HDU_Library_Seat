@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -51,16 +52,12 @@ class DevTools:
         )
         self.sequence = 0
 
-    def evaluate(self, expression: str):
+    def command(self, method: str, params: dict):
         self.sequence += 1
         self.socket.send(json.dumps({
             "id": self.sequence,
-            "method": "Runtime.evaluate",
-            "params": {
-                "expression": expression,
-                "awaitPromise": True,
-                "returnByValue": True,
-            },
+            "method": method,
+            "params": params,
         }))
         while True:
             message = json.loads(self.socket.recv())
@@ -69,7 +66,15 @@ class DevTools:
             if "error" in message or "exceptionDetails" in message.get("result", {}):
                 # Do not print browser state or URL: the path is an API secret.
                 raise RuntimeError("Android WebView JavaScript assertion failed")
-            return message["result"]["result"].get("value")
+            return message.get("result", {})
+
+    def evaluate(self, expression: str):
+        result = self.command("Runtime.evaluate", {
+            "expression": expression,
+            "awaitPromise": True,
+            "returnByValue": True,
+        })
+        return result["result"].get("value")
 
     def close(self):
         self.socket.close()
@@ -100,6 +105,16 @@ def screenshot(destination: Path):
 def dump_ui() -> ET.Element:
     adb("shell", "uiautomator", "dump", "/sdcard/hdu-smoke.xml")
     return ET.fromstring(adb("shell", "cat", "/sdcard/hdu-smoke.xml").strip())
+
+
+def is_login_page(url: str) -> bool:
+    location = urllib.parse.urlsplit(url)
+    if location.scheme != "https" or location.username is not None or location.port not in (None, 443):
+        return False
+    host = location.hostname or ""
+    if host == "hdu.huitu.zhishulib.com":
+        return location.path == "/" and location.fragment.startswith("!/")
+    return host == "hdu.edu.cn" or host.endswith(".hdu.edu.cn")
 
 
 def tap_native_button(text: str):
@@ -200,32 +215,69 @@ def main():
         def official_login():
             for target in targets():
                 url = target.get("url", "")
-                if not (url.startswith("https://hdu.huitu.zhishulib.com/") or re.match(r"https://([a-zA-Z0-9-]+\.)*hdu\.edu\.cn(?:/|:|$)", url)):
+                # /Seat/Index is a backend controller whose authenticated
+                # response is only 'Seat Index', not the official SPA.
+                if not is_login_page(url):
                     continue
                 view = DevTools(target)
                 try:
                     assert view.evaluate("typeof window.HduAndroid === 'undefined'") is True
-                    return True
+                    return target
                 finally:
                     view.close()
             return False
 
-        wait_for(official_login, seconds=45)
+        target = wait_for(official_login, seconds=45)
+        passed("Login enters the official root SPA or university SSO, not the Seat Index controller")
+
+        # Exercise the real native onPageStarted recovery, including the CAS
+        # return path that previously left the user on a 'Seat Index' page.
+        view = DevTools(target)
+        try:
+            previous_loader = view.command("Page.getFrameTree", {})["frameTree"]["frame"]["loaderId"]
+            view.command("Page.navigate", {"url": "https://hdu.huitu.zhishulib.com/Seat/Index"})
+        finally:
+            view.close()
+
+        def recovered_controller():
+            recovered = official_login()
+            if not recovered:
+                return False
+            view = DevTools(recovered)
+            try:
+                frame = view.command("Page.getFrameTree", {})["frameTree"]["frame"]
+                # Waiting for a different committed document prevents the old
+                # pre-navigation SPA target from satisfying this assertion.
+                return frame["loaderId"] != previous_loader and is_login_page(frame.get("url", ""))
+            finally:
+                view.close()
+
+        wait_for(recovered_controller, seconds=60)
+        passed("Native WebView recovers a raw Seat Index controller navigation to the root SPA")
 
         def login_ui_ready():
             root = dump_ui()
             text = ' '.join(node.get('text', '') for node in root.iter('node'))
-            return '学校账号登录' in text and '返回' in text and ('完成登录' in text or '重新加载' in text)
+            feedback = any(value in text for value in ('正在连接', '正在验证', '在学校页面', '无法连接', '登录验证', '图书馆'))
+            return '学校账号登录' in text and '返回' in text and ('完成登录' in text or '重新加载' in text) and feedback
 
         # A DevTools target can exist before Android draws the new activity.
         # Require the actual native toolbar before recording login evidence.
         wait_for(login_ui_ready)
         screenshot(args.out / "official-login.png")
-        passed("Account login displays native login toolbar and official HTTPS WebView without Android bridge")
+        passed("Account login displays loading/error guidance and isolated official HTTPS WebView; no account authentication is claimed")
+        wait_for(lambda: tap_native_button("返回"))
+        browser = wait_for(dashboard)
+        browser.evaluate("HduAndroid.signIn(); true")
+        browser.close()
+        passed("Cancelling official login returns to dashboard")
+        wait_for(official_login, seconds=45)
+        wait_for(login_ui_ready)
+        screenshot(args.out / "reopened-login.png")
+        passed("Reopening login reuses the official SPA entry instead of displaying a Seat Index stub")
         wait_for(lambda: tap_native_button("返回"))
         browser = wait_for(dashboard)
         browser.close()
-        passed("Cancelling official login returns to dashboard")
 
         if args.release_apk and args.release_apk.is_file():
             adb("uninstall", PACKAGE)

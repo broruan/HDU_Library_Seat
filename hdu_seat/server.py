@@ -173,6 +173,7 @@ def settings_to_nested(s: Settings) -> dict[str, Any]:
         "max_attempts": s.max_attempts,
         "request_timeout": s.request_timeout,
         "schedule_at": s.schedule_at,
+        "user_agent": s.user_agent,
         "email": asdict(s.email),
     }
 
